@@ -1,0 +1,16 @@
+{
+  "name": "bau-ki-node",
+  "version": "1.0.0",
+  "description": "Telegram KI Bot für Baufirma (lesen + zusammenfassen)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "axios": "^1.13.2",
+    "better-sqlite3": "^9.4.0",
+    "dotenv": "^16.4.5",
+    "node-fetch": "^3.3.2",
+    "telegraf": "^4.16.3"
+  }
+}
