@@ -53,4 +53,34 @@ Bericht:
   return `📋 KI-Bericht – ${groupName}\n\n${text}`;
 }
 
-module.exports = { chatProjectAI, generateReport };
+async function generateEmailDraft({ userText, projectName, contextText }) {
+  const prompt = `
+Du bist ein Assistent, der professionelle E-Mails fuer eine Baufirma schreibt.
+Schreibe eine kurze, klare E-Mail auf Deutsch.
+Gib exakt dieses Format aus:
+Subject: <Betreffzeile>
+Body:
+<E-Mail-Text als Klartext, ohne Markdown>
+
+Anforderungen:
+- konkret, sachlich, freundlich
+- wenn sinnvoll: kurze Aufzaehlung im Text (mit "-" pro Zeile)
+- beende mit "Naechste Schritte:" und maximal 3 Punkten
+
+Projekt: ${projectName || "Allgemein"}
+${contextText ? `Kontext aus Telegram-Gruppen:\n${contextText}\n` : ""}
+
+User-Anfrage: ${userText}
+`.trim();
+
+  const raw = await ollama(prompt);
+  const subjectMatch = raw.match(/^Subject:\s*(.+)$/im);
+  const bodyMatch = raw.match(/^Body:\s*([\s\S]*)$/im);
+
+  const subject = subjectMatch ? subjectMatch[1].trim() : `Baustellen-Update: ${projectName || "Allgemein"}`;
+  const body = bodyMatch ? bodyMatch[1].trim() : raw.trim();
+
+  return { subject, body };
+}
+
+module.exports = { chatProjectAI, generateReport, generateEmailDraft };

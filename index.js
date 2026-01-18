@@ -1,10 +1,21 @@
 require("dotenv").config();
 const { Telegraf } = require("telegraf");
 const Database = require("better-sqlite3");
-const { generateReport, chatProjectAI } = require("./ai");
+const nodemailer = require("nodemailer");
+const fs = require("fs");
+const path = require("path");
+const { generateReport, chatProjectAI, generateEmailDraft } = require("./ai");
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const OWNER_USER_ID = Number(process.env.OWNER_USER_ID);
+const SMTP_HOST = process.env.SMTP_HOST;
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
+const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER;
+const DEFAULT_EMAIL_TO = process.env.EMAIL_TO;
+const CONTACTS_FILE = path.join(__dirname, "contacts.csv");
+const EMAIL_LOG_FILE = path.join(__dirname, "email_logs.csv");
 
 const ALLOWED_GROUP_IDS = (process.env.ALLOWED_GROUP_IDS || "")
   .split(",")
@@ -71,6 +82,7 @@ function summarize(rows) {
 const aiMode = new Map(); // userId -> boolean
 const projectNameByUser = new Map(); // userId -> string
 const contextHoursByUser = new Map(); // userId -> number (optional, default 24)
+const pendingEmailByUser = new Map(); // userId -> { to, subject, body, project }
 
 function getProjectName(userId) {
   return projectNameByUser.get(userId) || "Allgemein";
@@ -104,6 +116,156 @@ function buildContextTextForHours(hours) {
   return out.trim();
 }
 
+function ensureContactsFile() {
+  if (fs.existsSync(CONTACTS_FILE)) return;
+  const header = "project;email;phone;name;source_user;source_text;ts\n";
+  fs.writeFileSync(CONTACTS_FILE, header, "utf8");
+}
+
+function ensureEmailLogFile() {
+  if (fs.existsSync(EMAIL_LOG_FILE)) return;
+  const header = "ts;action;project;to;subject;status;error;user;context\n";
+  fs.writeFileSync(EMAIL_LOG_FILE, header, "utf8");
+}
+
+function logEmailEvent({ action, project, to, subject, status, error, user, context }) {
+  ensureEmailLogFile();
+  const ts = new Date().toISOString();
+  const row = [
+    ts,
+    action || "",
+    project || "",
+    to || "",
+    subject || "",
+    status || "",
+    error || "",
+    user || "",
+    context || "",
+  ]
+    .map(sanitizeCsvValue)
+    .join(";");
+  fs.appendFileSync(EMAIL_LOG_FILE, row + "\n", "utf8");
+}
+
+function extractEmails(text) {
+  const matches = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi);
+  return matches ? Array.from(new Set(matches)) : [];
+}
+
+function extractPhones(text) {
+  const matches = text.match(/(?:\+?\d[\d\s().-]{7,}\d)/g);
+  return matches ? Array.from(new Set(matches)) : [];
+}
+
+function sanitizeCsvValue(value) {
+  const v = String(value || "").replace(/\r?\n/g, " ").trim();
+  return v.replace(/;/g, ",");
+}
+
+function appendContactRows(project, emails, phones, user, text) {
+  if (!emails.length && !phones.length) return;
+  ensureContactsFile();
+  const ts = new Date().toISOString();
+  const rows = [];
+  const emailList = emails.length ? emails : [""];
+  const phoneList = phones.length ? phones : [""];
+  for (const email of emailList) {
+    for (const phone of phoneList) {
+      rows.push(
+        [
+          project,
+          email,
+          phone,
+          "",
+          user,
+          text,
+          ts,
+        ].map(sanitizeCsvValue).join(";")
+      );
+    }
+  }
+  fs.appendFileSync(CONTACTS_FILE, rows.join("\n") + "\n", "utf8");
+}
+
+function loadContacts() {
+  if (!fs.existsSync(CONTACTS_FILE)) return [];
+  const raw = fs.readFileSync(CONTACTS_FILE, "utf8");
+  const lines = raw.split(/\r?\n/).filter(Boolean);
+  if (!lines.length) return [];
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(";");
+    const [project, email, phone, name] = parts;
+    if (!project) continue;
+    rows.push({
+      project: project.trim(),
+      email: (email || "").trim(),
+      phone: (phone || "").trim(),
+      name: (name || "").trim(),
+    });
+  }
+  return rows;
+}
+
+function getRecipientsForProject(projectName) {
+  const contacts = loadContacts();
+  const target = (projectName || "").trim().toLowerCase();
+  if (!target) return [];
+  const matches = contacts.filter(
+    (c) => c.project.toLowerCase() === target || target.includes(c.project.toLowerCase())
+  );
+  const emails = matches.map((m) => m.email).filter(Boolean);
+  return Array.from(new Set(emails));
+}
+
+function canSendEmail() {
+  return SMTP_HOST && SMTP_USER && SMTP_PASS && SMTP_FROM;
+}
+
+function getTransporter() {
+  return nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+  });
+}
+
+function extractEmail(text) {
+  const match = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return match ? match[0] : "";
+}
+
+function hasEmailAddress(text) {
+  return extractEmails(text).length > 0;
+}
+
+function isSendIntent(text) {
+  const lower = text.toLowerCase();
+  return (
+    lower.includes("schick") ||
+    lower.includes("sende") ||
+    lower.includes("send") ||
+    lower.includes("verschick") ||
+    lower.includes("versend") ||
+    lower.includes("abschick")
+  );
+}
+
+function isMailRequest(text) {
+  const lower = text.toLowerCase();
+  const hasMailWord = /(?:e-?mail|e mail|email|mail)/i.test(text);
+  const mailPattern = /(?:mail|email)\s+an\s+/i.test(text) || /per\s+(mail|email)/i.test(text);
+  return (isSendIntent(text) && (hasMailWord || hasEmailAddress(text))) || mailPattern;
+}
+
+function detectProjectFromText(text) {
+  const contacts = loadContacts();
+  const names = Array.from(new Set(contacts.map((c) => c.project).filter(Boolean)));
+  const lower = text.toLowerCase();
+  return names.find((name) => lower.includes(name.toLowerCase())) || "";
+}
+
 // ========== COMMANDS ==========
 bot.start((ctx) => {
   ctx.reply(
@@ -122,7 +284,9 @@ bot.start((ctx) => {
       "/context <stunden> – Kontextzeitraum für KI-Chat (Default 24)\n" +
       "/ai – KI-Modus AN (privat chatten)\n" +
       "/ai off – KI-Modus AUS\n" +
-      "/ask <frage> – einmalige Frage an KI (privat)"
+      "/ask <frage> – einmalige Frage an KI (privat)\n\n" +
+      "E-Mail Entwurf (privat):\n" +
+      "Schreibe z.B.: KI schreib bitte eine Mail ueber den aktuellen Stand ..."
   );
 });
 
@@ -308,6 +472,10 @@ bot.on("text", async (ctx) => {
       "unknown";
 
     const text = ctx.message?.text || "";
+    const project = chat.title || String(chat.id);
+    const emails = extractEmails(text);
+    const phones = extractPhones(text);
+    appendContactRows(project, emails, phones, user, text);
     insertMsg.run(chat.id, chat.title || String(chat.id), user, text);
     return;
   }
@@ -319,6 +487,159 @@ bot.on("text", async (ctx) => {
     if (!enabled) return;
 
     const userText = ctx.message.text;
+    const pending = pendingEmailByUser.get(ctx.from.id);
+    const lower = userText.trim().toLowerCase();
+    const sendIntent = isSendIntent(userText);
+
+    if (
+      pending &&
+      (lower === "go" ||
+        lower === "senden" ||
+        lower === "send" ||
+        lower === "verschicke" ||
+        lower === "schicke" ||
+        lower === "versenden" ||
+        lower === "abschicken" ||
+        lower === "los")
+    ) {
+      if (!canSendEmail()) {
+        logEmailEvent({
+          action: "send",
+          project: pending.project,
+          to: pending.to,
+          subject: pending.subject,
+          status: "error",
+          error: "SMTP_NOT_CONFIGURED",
+          user: String(ctx.from?.id || ""),
+          context: "missing_smtp",
+        });
+        return ctx.reply(
+          "❌ SMTP nicht konfiguriert. Bitte SMTP_HOST/SMTP_USER/SMTP_PASS/SMTP_FROM setzen."
+        );
+      }
+      try {
+        const transporter = getTransporter();
+        await transporter.sendMail({
+          from: SMTP_FROM,
+          to: pending.to,
+          subject: pending.subject,
+          text: pending.body,
+        });
+        logEmailEvent({
+          action: "send",
+          project: pending.project,
+          to: pending.to,
+          subject: pending.subject,
+          status: "ok",
+          user: String(ctx.from?.id || ""),
+          context: "sent",
+        });
+        pendingEmailByUser.delete(ctx.from.id);
+        return ctx.reply("✅ E-Mail gesendet.");
+      } catch (err) {
+        console.error("[EMAIL] send error:", err);
+        logEmailEvent({
+          action: "send",
+          project: pending.project,
+          to: pending.to,
+          subject: pending.subject,
+          status: "error",
+          error: String(err?.message || err),
+          user: String(ctx.from?.id || ""),
+          context: "send_failed",
+        });
+        return ctx.reply("❌ Fehler beim Senden der E-Mail. Schau ins Terminal.");
+      }
+    }
+
+    if (pending && (lower === "abbrechen" || lower === "cancel" || lower === "stop")) {
+      pendingEmailByUser.delete(ctx.from.id);
+      return ctx.reply("🛑 E-Mail-Entwurf verworfen.");
+    }
+
+    const detectedProject = detectProjectFromText(userText);
+    const pn = getProjectName(ctx.from.id);
+    const projectForRecipients = detectedProject || pn;
+    const projectRecipients = getRecipientsForProject(projectForRecipients);
+    const shouldDraft = isMailRequest(userText) || (sendIntent && projectRecipients.length > 0);
+
+    if (!pending && sendIntent && !shouldDraft) {
+      logEmailEvent({
+        action: "send",
+        project: projectForRecipients,
+        to: "",
+        subject: "",
+        status: "error",
+        error: "NO_DRAFT",
+        user: String(ctx.from?.id || ""),
+        context: "send_without_draft",
+      });
+      return ctx.reply(
+        "Ich habe keinen Entwurf gefunden. Bitte schreibe zuerst eine Mail-Anfrage (z.B. 'schicke eine Mail an name@firma.at ...')."
+      );
+    }
+
+    if (shouldDraft) {
+      const recipient =
+        extractEmail(userText) ||
+        (projectRecipients.length ? projectRecipients.join(",") : "") ||
+        DEFAULT_EMAIL_TO;
+      if (!recipient) {
+        logEmailEvent({
+          action: "draft",
+          project: projectForRecipients,
+          to: "",
+          subject: "",
+          status: "error",
+          error: "NO_RECIPIENT",
+          user: String(ctx.from?.id || ""),
+          context: "missing_recipient",
+        });
+        return ctx.reply(
+          "Bitte Empfaenger-E-Mail angeben (z.B. name@firma.at) oder Kontakte in der Gruppen-Chat speichern."
+        );
+      }
+
+      await ctx.reply("✉️ Erstelle E-Mail-Entwurf… ⏳");
+
+      try {
+        const hours = getContextHours(ctx.from.id);
+        const contextText = buildContextTextForHours(hours);
+        const { subject, body } = await generateEmailDraft({
+          userText,
+          projectName: projectForRecipients,
+          contextText,
+        });
+
+        pendingEmailByUser.set(ctx.from.id, {
+          to: recipient,
+          subject,
+          body,
+          project: projectForRecipients,
+        });
+        logEmailEvent({
+          action: "draft",
+          project: projectForRecipients,
+          to: recipient,
+          subject,
+          status: "ok",
+          user: String(ctx.from?.id || ""),
+          context: "draft_created",
+        });
+
+        const hint = canSendEmail()
+          ? "Antworte mit 'go' zum Senden oder 'abbrechen' zum Verwerfen."
+          : "SMTP ist nicht konfiguriert. Entwurf gespeichert, aber Versand erst nach SMTP-Setup.";
+
+        return ctx.reply(
+          `📧 Entwurf:\nAn: ${recipient}\nBetreff: ${subject}\n\n${body}\n\n${hint}`
+        );
+      } catch (err) {
+        console.error("[EMAIL] draft error:", err);
+        return ctx.reply("❌ Fehler bei der E-Mail-Erstellung. Schau ins Terminal.");
+      }
+    }
+
     await ctx.reply("🧠 …");
 
     try {
