@@ -1,0 +1,32 @@
+[
+  {
+    "code": "B-HB-RDR-04-25",
+    "name": "KiTa Rudolf-Diesel-Ring",
+    "contactName": "Max Mustermann",
+    "contactEmail": "max@firma.at",
+    "cc": "cc@firma.at",
+    "client": "Markt Holzkirchen",
+    "createdAt": "2026-01-25T18:53:00.332Z",
+    "dirName": "B-HB-RDR-04-25"
+  },
+  {
+    "code": "HB-NORD-01",
+    "name": "Umbau Nordhalle",
+    "contactName": "Anna Huber",
+    "contactEmail": "anna@firma.at",
+    "cc": "cc@firma.at",
+    "client": "Stadt Muenchen",
+    "createdAt": "2026-01-25T18:58:03.157Z",
+    "dirName": "HB-NORD-01"
+  },
+  {
+    "code": "SB-NORD-01",
+    "name": "Baustelle sanierung",
+    "contactName": "mehmet demir",
+    "contactEmail": "demir@firma.at",
+    "cc": "kk@firma.at",
+    "client": "Stadt Lindau",
+    "createdAt": "2026-01-25T19:30:26.594Z",
+    "dirName": "SB-NORD-01"
+  }
+]

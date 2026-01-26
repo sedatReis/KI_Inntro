@@ -83,4 +83,39 @@ User-Anfrage: ${userText}
   return { subject, body };
 }
 
-module.exports = { chatProjectAI, generateReport, generateEmailDraft };
+async function classifyReportLines(lines) {
+  const prompt = `
+Du bist ein Assistent fuer Baustellenberichte.
+Ordne die folgenden Zeilen in drei Kategorien ein:
+1) leistungen
+2) arbeitskraefte
+3) material
+
+Gib NUR JSON zurueck, ohne Markdown:
+{"leistungen":[],"arbeitskraefte":[],"material":[]}
+
+Regeln:
+- Teile Inhalte, wenn mehrere Themen in einer Zeile stehen.
+- arbeitskraefte: Personen + Gruppe/FA, wenn erkennbar.
+- material: Menge/Einheit/Bezeichnung, wenn erkennbar.
+- Wenn unklar, ordne als leistungen ein.
+
+Zeilen:
+${(lines || []).map((l) => `- ${l}`).join("\n")}
+`.trim();
+
+  const raw = await ollama(prompt);
+  try {
+    const jsonText = raw.trim().replace(/^```json|```$/g, "").trim();
+    const data = JSON.parse(jsonText);
+    return {
+      leistungen: Array.isArray(data.leistungen) ? data.leistungen : [],
+      arbeitskraefte: Array.isArray(data.arbeitskraefte) ? data.arbeitskraefte : [],
+      material: Array.isArray(data.material) ? data.material : [],
+    };
+  } catch (err) {
+    return null;
+  }
+}
+
+module.exports = { chatProjectAI, generateReport, generateEmailDraft, classifyReportLines };

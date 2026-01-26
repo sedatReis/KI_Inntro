@@ -4,7 +4,13 @@ const Database = require("better-sqlite3");
 const nodemailer = require("nodemailer");
 const fs = require("fs");
 const path = require("path");
-const { generateReport, chatProjectAI, generateEmailDraft } = require("./ai");
+const { generateReport, chatProjectAI, generateEmailDraft, classifyReportLines } = require("./ai");
+const {
+  ensureBaseStructure,
+  upsertProject,
+  getProjectByCode,
+  generateReportFile,
+} = require("./reports");
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const OWNER_USER_ID = Number(process.env.OWNER_USER_ID);
@@ -28,6 +34,7 @@ if (!OWNER_USER_ID) throw new Error("OWNER_USER_ID fehlt");
 
 const bot = new Telegraf(BOT_TOKEN);
 const db = new Database("messages.db");
+ensureBaseStructure();
 
 // DB init
 db.exec(`
@@ -83,6 +90,7 @@ const aiMode = new Map(); // userId -> boolean
 const projectNameByUser = new Map(); // userId -> string
 const contextHoursByUser = new Map(); // userId -> number (optional, default 24)
 const pendingEmailByUser = new Map(); // userId -> { to, subject, body, project }
+const activeReportByChat = new Map(); // chatId -> { type, projectCode, lines }
 
 function getProjectName(userId) {
   return projectNameByUser.get(userId) || "Allgemein";
@@ -266,6 +274,12 @@ function detectProjectFromText(text) {
   return names.find((name) => lower.includes(name.toLowerCase())) || "";
 }
 
+function parseReportStart(text) {
+  const match = String(text || "").trim().match(/^(RB|BTB)\s+(.+)$/i);
+  if (!match) return null;
+  return { type: match[1].toUpperCase(), projectCode: match[2].trim() };
+}
+
 // ========== COMMANDS ==========
 bot.start((ctx) => {
   ctx.reply(
@@ -279,6 +293,8 @@ bot.start((ctx) => {
       "/summarygroup – Zusammenfassung nur für diese Gruppe (24h)\n" +
       "/summarygroup 6 – nur diese Gruppe, letzte 6 Stunden\n" +
       "/report – KI Baustellenbericht (letzte 24h, nur diese Gruppe)\n\n" +
+      "Projekte:\n" +
+      "/newproject <Kuerzel> | <Projektname> | <Ansprechperson> | <Email> | <CC> | <Auftraggeber>\n\n" +
       "Privater Projekt-KI Chat:\n" +
       "/project <name> – Projekt setzen\n" +
       "/context <stunden> – Kontextzeitraum für KI-Chat (Default 24)\n" +
@@ -390,6 +406,43 @@ bot.command("report", async (ctx) => {
   }
 });
 
+// ======= Projekte =======
+bot.command("newproject", async (ctx) => {
+  if (!isOwner(ctx)) return ctx.reply("⛔ Keine Berechtigung");
+  const raw = ctx.message.text.replace(/^\/newproject\s*/i, "").trim();
+  if (!raw) {
+    return ctx.reply(
+      "Bitte angeben:\n" +
+        "/newproject <Kuerzel> | <Projektname> | <Ansprechperson> | <Email> | <CC> | <Auftraggeber>"
+    );
+  }
+
+  const parts = raw.split("|").map((p) => p.trim());
+  const [code, name, contactName, contactEmail, cc, client] = parts;
+  if (!code || !contactName || !contactEmail) {
+    return ctx.reply(
+      "Fehlende Pflichtfelder. Format:\n" +
+        "/newproject <Kuerzel> | <Projektname> | <Ansprechperson> | <Email> | <CC> | <Auftraggeber>"
+    );
+  }
+
+  const project = {
+    code,
+    name: name || code,
+    contactName,
+    contactEmail,
+    cc: cc || "",
+    client: client || "",
+    createdAt: new Date().toISOString(),
+  };
+
+  const savedProject = await upsertProject(project);
+  return ctx.reply(
+    `✅ Projekt gespeichert: ${savedProject.code}\n` +
+      `Ordnerstruktur erstellt in Bauvorhaben/${savedProject.dirName}`
+  );
+});
+
 // ======= Privater Projekt-KI Chat =======
 
 // Projekt setzen
@@ -473,6 +526,71 @@ bot.on("text", async (ctx) => {
 
     const text = ctx.message?.text || "";
     const project = chat.title || String(chat.id);
+
+    const startInfo = parseReportStart(text);
+    if (startInfo) {
+      const existing = activeReportByChat.get(chat.id);
+      if (existing) {
+        await ctx.reply(
+          `⚠️ Es läuft bereits ein ${existing.type}-Bericht für ${existing.projectCode}. Schreibe 'Ende' um ihn zu beenden.`
+        );
+      } else {
+        const projectEntry = getProjectByCode(startInfo.projectCode);
+        if (!projectEntry) {
+          await ctx.reply(
+            `❌ Projekt '${startInfo.projectCode}' nicht gefunden. Lege es mit /newproject an.`
+          );
+        } else {
+          activeReportByChat.set(chat.id, {
+            type: startInfo.type,
+            projectCode: startInfo.projectCode,
+            lines: [],
+          });
+          await ctx.reply(
+            `✅ ${startInfo.type}-Bericht gestartet für ${startInfo.projectCode}.\n` +
+              "Schreibe die Inhalte in die Gruppe.\n" +
+              "Optional: AK: <Gruppe; Name> | MAT: <Menge; Einheit; Bezeichnung>\n" +
+              "Beenden mit 'Ende'."
+          );
+        }
+      }
+    } else if (activeReportByChat.has(chat.id)) {
+      const state = activeReportByChat.get(chat.id);
+      if (text.trim().toLowerCase() === "ende") {
+        const projectEntry = getProjectByCode(state.projectCode);
+        if (!projectEntry) {
+          activeReportByChat.delete(chat.id);
+          await ctx.reply(
+            `❌ Projekt '${state.projectCode}' nicht gefunden. Lege es mit /newproject an.`
+          );
+          return;
+        }
+        try {
+          await ctx.reply("📄 Bericht wird erstellt…");
+          let sections = null;
+          try {
+            sections = await classifyReportLines(state.lines);
+          } catch (err) {
+            console.error("[REPORT-CLASSIFY] error:", err);
+          }
+          const result = await generateReportFile({
+            type: state.type,
+            project: projectEntry,
+            lines: state.lines,
+            sections: sections || undefined,
+          });
+          await ctx.reply(`✅ Bericht gespeichert: ${result.outFile}`);
+        } catch (err) {
+          console.error("[REPORT-FILE] error:", err);
+          await ctx.reply("❌ Fehler beim Erstellen des Berichts. Schau ins Terminal.");
+        } finally {
+          activeReportByChat.delete(chat.id);
+        }
+      } else {
+        state.lines.push(text);
+      }
+    }
+
     const emails = extractEmails(text);
     const phones = extractPhones(text);
     appendContactRows(project, emails, phones, user, text);
