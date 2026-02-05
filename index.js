@@ -5,6 +5,9 @@ const nodemailer = require("nodemailer");
 const fs = require("fs");
 const path = require("path");
 const { generateReport, chatProjectAI, generateEmailDraft, classifyReportLines } = require("./ai");
+
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetchImpl }) => fetchImpl(...args));
 const {
   ensureBaseStructure,
   upsertProject,
@@ -90,7 +93,44 @@ const aiMode = new Map(); // userId -> boolean
 const projectNameByUser = new Map(); // userId -> string
 const contextHoursByUser = new Map(); // userId -> number (optional, default 24)
 const pendingEmailByUser = new Map(); // userId -> { to, subject, body, project }
-const activeReportByChat = new Map(); // chatId -> { type, projectCode, lines }
+const activeReportByChat = new Map(); // chatId -> { type, projectCode, lines, photos }
+
+function ensureDir(dir) {
+  fs.mkdirSync(dir, { recursive: true });
+}
+
+function getPhotoExtension(filePath) {
+  const ext = path.extname(filePath || "").toLowerCase();
+  if (ext) return ext;
+  return ".jpg";
+}
+
+async function downloadTelegramFile(fileUrl, destPath) {
+  const res = await fetch(fileUrl);
+  if (!res.ok) {
+    throw new Error(`Download failed: ${res.status} ${res.statusText}`);
+  }
+  const arrayBuffer = await res.arrayBuffer();
+  fs.writeFileSync(destPath, Buffer.from(arrayBuffer));
+}
+
+async function saveReportPhotos({ ctx, state, reportFile, reportNumber }) {
+  if (!state?.photos?.length) return;
+  const reportDir = path.dirname(reportFile);
+  const prefix = state.type || "RB";
+  const photosDir = path.join(reportDir, `${prefix}${reportNumber}-Fotos`);
+  ensureDir(photosDir);
+
+  for (let i = 0; i < state.photos.length; i += 1) {
+    const fileId = state.photos[i];
+    const file = await ctx.telegram.getFile(fileId);
+    const filePath = file?.file_path || "";
+    const ext = getPhotoExtension(filePath);
+    const fileUrl = await ctx.telegram.getFileLink(fileId);
+    const dest = path.join(photosDir, `Foto ${i + 1}${ext}`);
+    await downloadTelegramFile(fileUrl.toString(), dest);
+  }
+}
 
 function getProjectName(userId) {
   return projectNameByUser.get(userId) || "Allgemein";
@@ -512,6 +552,32 @@ bot.command("ask", async (ctx) => {
 });
 
 // ========== ONE MESSAGE HANDLER ==========
+bot.on("photo", async (ctx) => {
+  const chat = ctx.chat;
+  if (!chat || !["group", "supergroup"].includes(chat.type)) return;
+  if (!ALLOWED_GROUP_IDS.includes(chat.id)) return;
+  if (!activeReportByChat.has(chat.id)) return;
+
+  const photos = ctx.message?.photo || [];
+  if (!photos.length) return;
+  const largest = photos[photos.length - 1];
+  const state = activeReportByChat.get(chat.id);
+  if (largest?.file_id) state.photos.push(largest.file_id);
+});
+
+bot.on("document", async (ctx) => {
+  const chat = ctx.chat;
+  if (!chat || !["group", "supergroup"].includes(chat.type)) return;
+  if (!ALLOWED_GROUP_IDS.includes(chat.id)) return;
+  if (!activeReportByChat.has(chat.id)) return;
+
+  const doc = ctx.message?.document;
+  if (!doc?.file_id) return;
+  if (!String(doc.mime_type || "").startsWith("image/")) return;
+  const state = activeReportByChat.get(chat.id);
+  state.photos.push(doc.file_id);
+});
+
 bot.on("text", async (ctx) => {
   const chat = ctx.chat;
 
@@ -545,6 +611,7 @@ bot.on("text", async (ctx) => {
             type: startInfo.type,
             projectCode: startInfo.projectCode,
             lines: [],
+            photos: [],
           });
           await ctx.reply(
             `✅ ${startInfo.type}-Bericht gestartet für ${startInfo.projectCode}.\n` +
@@ -579,6 +646,21 @@ bot.on("text", async (ctx) => {
             lines: state.lines,
             sections: sections || undefined,
           });
+          try {
+            await saveReportPhotos({
+              ctx,
+              state,
+              reportFile: result.outFile,
+              reportNumber: result.number,
+            });
+          } catch (err) {
+            console.error("[REPORT-PHOTOS] error:", err);
+          }
+          try {
+            await ctx.replyWithDocument({ source: result.outFile });
+          } catch (err) {
+            console.error("[REPORT-UPLOAD] error:", err);
+          }
           await ctx.reply(`✅ Bericht gespeichert: ${result.outFile}`);
         } catch (err) {
           console.error("[REPORT-FILE] error:", err);

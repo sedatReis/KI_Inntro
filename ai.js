@@ -1,9 +1,12 @@
 const axios = require("axios");
 
+const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434/api/generate";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3";
+
 async function ollama(prompt) {
   const { data } = await axios.post(
-    "http://localhost:11434/api/generate",
-    { model: "llama3", prompt, stream: false },
+    OLLAMA_URL,
+    { model: OLLAMA_MODEL, prompt, stream: false },
     { timeout: 120000 }
   );
   return (data.response || "").trim();
