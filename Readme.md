@@ -5,6 +5,7 @@ Put this in your env files and put your credentials
 BOT_TOKEN=8xxxx
 OWNER_USER_ID=123456789
 ALLOWED_GROUP_IDS=-1xxx
+BAUVORHABEN_ROOT=Z:/Projekte/Bauvorhaben
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_USER=user@example.com
@@ -18,4 +19,3 @@ SMTP_FROM=bot@example.com
 
 and also on your terminal
 ==> ollama serve
-

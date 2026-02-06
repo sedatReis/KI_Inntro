@@ -9,6 +9,7 @@ const { generateReport, chatProjectAI, generateEmailDraft, classifyReportLines }
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetchImpl }) => fetchImpl(...args));
 const {
+  DATA_ROOT,
   ensureBaseStructure,
   upsertProject,
   getProjectByCode,
@@ -477,9 +478,10 @@ bot.command("newproject", async (ctx) => {
   };
 
   const savedProject = await upsertProject(project);
+  const projectPath = path.join(DATA_ROOT, savedProject.dirName);
   return ctx.reply(
     `✅ Projekt gespeichert: ${savedProject.code}\n` +
-      `Ordnerstruktur erstellt in Bauvorhaben/${savedProject.dirName}`
+      `Ordnerstruktur erstellt in ${projectPath}`
   );
 });
 

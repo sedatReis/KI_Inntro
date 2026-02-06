@@ -2,7 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const ExcelJS = require("exceljs");
 
-const DATA_ROOT = path.join(__dirname, "Bauvorhaben");
+const DATA_ROOT =
+  (process.env.BAUVORHABEN_ROOT || "").trim() || path.join(__dirname, "Bauvorhaben");
 const META_DIR = path.join(DATA_ROOT, "_meta");
 const PROJECTS_JSON = path.join(META_DIR, "projects.json");
 const PROJECTS_XLSX = path.join(META_DIR, "Bauvorhaben.xlsx");
