@@ -24,8 +24,9 @@ const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER;
 const DEFAULT_EMAIL_TO = process.env.EMAIL_TO;
-const CONTACTS_FILE = path.join(__dirname, "contacts.csv");
-const EMAIL_LOG_FILE = path.join(__dirname, "email_logs.csv");
+const META_DIR = path.join(DATA_ROOT, "_meta");
+const CONTACTS_FILE = path.join(META_DIR, "contacts.csv");
+const EMAIL_LOG_FILE = path.join(META_DIR, "email_logs.csv");
 
 const ALLOWED_GROUP_IDS = (process.env.ALLOWED_GROUP_IDS || "")
   .split(",")
@@ -36,9 +37,9 @@ const ALLOWED_GROUP_IDS = (process.env.ALLOWED_GROUP_IDS || "")
 if (!BOT_TOKEN) throw new Error("BOT_TOKEN fehlt");
 if (!OWNER_USER_ID) throw new Error("OWNER_USER_ID fehlt");
 
-const bot = new Telegraf(BOT_TOKEN);
-const db = new Database("messages.db");
 ensureBaseStructure();
+const bot = new Telegraf(BOT_TOKEN);
+const db = new Database(path.join(META_DIR, "messages.db"));
 console.log(`[BOOT] DATA_ROOT: ${DATA_ROOT}`);
 
 // DB init
