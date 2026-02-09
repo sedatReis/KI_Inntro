@@ -2,8 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const ExcelJS = require("exceljs");
 
-const DATA_ROOT =
-  (process.env.BAUVORHABEN_ROOT || "").trim() || path.join(__dirname, "Bauvorhaben");
+const DEFAULT_DATA_ROOT = path.join(__dirname, "Bauvorhaben");
+const DATA_ROOT = (process.env.BAUVORHABEN_ROOT || "").trim() || DEFAULT_DATA_ROOT;
 const META_DIR = path.join(DATA_ROOT, "_meta");
 const PROJECTS_JSON = path.join(META_DIR, "projects.json");
 const PROJECTS_XLSX = path.join(META_DIR, "Bauvorhaben.xlsx");
@@ -109,11 +109,14 @@ function ensureProjectStructure(projectOrCode) {
 
 function getNextReportNumber(dir, prefix) {
   if (!fs.existsSync(dir)) return 1;
-  const files = fs.readdirSync(dir);
-  const re = new RegExp(`^${prefix}(\\d+)\\.xlsx$`, "i");
-  const numbers = files
-    .map((f) => {
-      const match = f.match(re);
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const fileRe = new RegExp(`^${prefix}(\\d+)\\.xlsx$`, "i");
+  const dirRe = new RegExp(`^${prefix}(\\d+)$`, "i");
+  const numbers = entries
+    .map((entry) => {
+      const name = entry.name;
+      let match = name.match(fileRe);
+      if (!match && entry.isDirectory()) match = name.match(dirRe);
       return match ? Number(match[1]) : null;
     })
     .filter((n) => Number.isFinite(n));
@@ -573,7 +576,10 @@ async function generateReportFile({ type, project, lines, sections }) {
       : path.join(projectDir, "Bautageberichte");
   const prefix = type === "RB" ? "RB" : "BTB";
   const number = getNextReportNumber(reportDir, prefix);
-  const outFile = path.join(reportDir, `${prefix}${number}.xlsx`);
+  const reportFolder = path.join(reportDir, `${prefix}${number}`);
+  ensureDir(reportFolder);
+  const outFile = path.join(reportFolder, `${prefix}${number}.xlsx`);
+  const photosDir = path.join(reportFolder, "Fotos");
 
   if (type === "RB") {
     await fillRegiebericht({ project, reportNumber: number, lines, sections, outFile });
@@ -581,7 +587,7 @@ async function generateReportFile({ type, project, lines, sections }) {
     await fillBautagesbericht({ project, reportNumber: number, lines, sections, outFile });
   }
 
-  return { outFile, number };
+  return { outFile, number, reportFolder, photosDir };
 }
 
 module.exports = {

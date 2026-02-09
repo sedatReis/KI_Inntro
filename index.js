@@ -39,6 +39,7 @@ if (!OWNER_USER_ID) throw new Error("OWNER_USER_ID fehlt");
 const bot = new Telegraf(BOT_TOKEN);
 const db = new Database("messages.db");
 ensureBaseStructure();
+console.log(`[BOOT] DATA_ROOT: ${DATA_ROOT}`);
 
 // DB init
 db.exec(`
@@ -115,12 +116,10 @@ async function downloadTelegramFile(fileUrl, destPath) {
   fs.writeFileSync(destPath, Buffer.from(arrayBuffer));
 }
 
-async function saveReportPhotos({ ctx, state, reportFile, reportNumber }) {
-  if (!state?.photos?.length) return;
-  const reportDir = path.dirname(reportFile);
-  const prefix = state.type || "RB";
-  const photosDir = path.join(reportDir, `${prefix}${reportNumber}-Fotos`);
+async function saveReportPhotos({ ctx, state, photosDir }) {
+  if (!state?.photos?.length) return [];
   ensureDir(photosDir);
+  const saved = [];
 
   for (let i = 0; i < state.photos.length; i += 1) {
     const fileId = state.photos[i];
@@ -130,7 +129,9 @@ async function saveReportPhotos({ ctx, state, reportFile, reportNumber }) {
     const fileUrl = await ctx.telegram.getFileLink(fileId);
     const dest = path.join(photosDir, `Foto ${i + 1}${ext}`);
     await downloadTelegramFile(fileUrl.toString(), dest);
+    saved.push(dest);
   }
+  return saved;
 }
 
 function getProjectName(userId) {
@@ -652,8 +653,7 @@ bot.on("text", async (ctx) => {
             await saveReportPhotos({
               ctx,
               state,
-              reportFile: result.outFile,
-              reportNumber: result.number,
+              photosDir: result.photosDir,
             });
           } catch (err) {
             console.error("[REPORT-PHOTOS] error:", err);
@@ -663,7 +663,11 @@ bot.on("text", async (ctx) => {
           } catch (err) {
             console.error("[REPORT-UPLOAD] error:", err);
           }
-          await ctx.reply(`✅ Bericht gespeichert: ${result.outFile}`);
+          const savedMsg = [
+            `✅ Bericht gespeichert in: ${result.reportFolder}`,
+            `Excel: ${result.outFile}`,
+          ].join("\n");
+          await ctx.reply(savedMsg);
         } catch (err) {
           console.error("[REPORT-FILE] error:", err);
           await ctx.reply("❌ Fehler beim Erstellen des Berichts. Schau ins Terminal.");
