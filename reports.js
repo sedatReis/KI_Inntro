@@ -193,16 +193,122 @@ function parseWorkerLine(line) {
   return { group: "", name: line.trim() };
 }
 
+const MATERIAL_UNIT_ALIASES = {
+  m: "m",
+  mm: "mm",
+  cm: "cm",
+  dm: "dm",
+  km: "km",
+  lfm: "lfm",
+  qm: "m²",
+  "m2": "m²",
+  "m²": "m²",
+  "m^2": "m²",
+  cbm: "m³",
+  "m3": "m³",
+  "m³": "m³",
+  "m^3": "m³",
+  l: "l",
+  lt: "l",
+  liter: "l",
+  ml: "ml",
+  cl: "cl",
+  kg: "kg",
+  g: "g",
+  t: "t",
+  stk: "Stk",
+  st: "Stk",
+  "stück": "Stk",
+  stueck: "Stk",
+  pcs: "Stk",
+  pc: "Stk",
+  paar: "Paar",
+  set: "Set",
+  satz: "Satz",
+  rolle: "Rolle",
+  rollen: "Rolle",
+  beutel: "Beutel",
+  sack: "Sack",
+  kiste: "Kiste",
+  karton: "Karton",
+  palette: "Palette",
+  pal: "Palette",
+  dose: "Dose",
+  paket: "Paket",
+  pack: "Pack",
+};
+
+const MATERIAL_UNIT_CANONICAL = new Set(
+  Object.values(MATERIAL_UNIT_ALIASES).map((u) => u.toLowerCase())
+);
+
+function normalizeMaterialUnit(rawUnit) {
+  const value = String(rawUnit || "").trim();
+  if (!value) return "";
+  const key = value
+    .toLowerCase()
+    .replace(/\./g, "")
+    .replace(/\s+/g, "");
+  return MATERIAL_UNIT_ALIASES[key] || value;
+}
+
+function isKnownMaterialUnit(rawUnit) {
+  const normalized = normalizeMaterialUnit(rawUnit);
+  if (!normalized) return false;
+  return MATERIAL_UNIT_CANONICAL.has(normalized.toLowerCase());
+}
+
+function isTimeUnitToken(rawUnit) {
+  return /^(h|std\.?|stunden)$/i.test(String(rawUnit || "").trim());
+}
+
+function parseMaterialEntries(text) {
+  const value = String(text || "").trim();
+  if (!value) return [];
+
+  const parts = value.split(";").map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 3 && parts[0] && parts[1]) {
+    return [
+      {
+        qty: parts[0],
+        unit: normalizeMaterialUnit(parts[1]),
+        desc: parts[2],
+      },
+    ];
+  }
+
+  const results = [];
+  const itemRegex =
+    /(\d+(?:[.,]\d+)?)\s*([A-Za-zÄÖÜäöüßµ²³]+)\s+([^,;]+)/gi;
+  let match;
+  while ((match = itemRegex.exec(value)) !== null) {
+    const unitRaw = match[2];
+    if (!isKnownMaterialUnit(unitRaw) || isTimeUnitToken(unitRaw)) continue;
+    results.push({
+      qty: match[1],
+      unit: normalizeMaterialUnit(unitRaw),
+      desc: match[3].trim(),
+    });
+  }
+
+  if (results.length) return results;
+
+  const xRegex = /(\d+(?:[.,]\d+)?)\s*[x×]\s*([^,;]+)/gi;
+  while ((match = xRegex.exec(value)) !== null) {
+    results.push({
+      qty: match[1],
+      unit: "Stk",
+      desc: match[2].trim(),
+    });
+  }
+
+  return results;
+}
+
 function parseMaterialLine(line) {
-  const parts = line.split(";").map((p) => p.trim()).filter(Boolean);
-  if (parts.length >= 3) {
-    return { qty: parts[0], unit: parts[1], desc: parts.slice(2).join(" ") };
-  }
-  const m = line.match(/^(\d+(?:[.,]\d+)?)\s+([A-Za-z]+)\s+(.+)$/);
-  if (m) {
-    return { qty: m[1], unit: m[2], desc: m[3] };
-  }
-  return { qty: "", unit: "", desc: line.trim() };
+  const entries = parseMaterialEntries(line);
+  if (entries.length) return entries[0];
+  return { qty: "", unit: "", desc: String(line || "").trim() };
 }
 
 function normalizeTextForCompare(text) {
@@ -213,14 +319,61 @@ function normalizeTextForCompare(text) {
     .trim();
 }
 
+function isDerivedFromLines(item, lines) {
+  const needle = normalizeTextForCompare(item);
+  if (!needle) return false;
+  return (lines || []).some((line) => {
+    const hay = normalizeTextForCompare(line);
+    if (!hay) return false;
+    return hay.includes(needle) || needle.includes(hay);
+  });
+}
+
+function sanitizeSections(sections, lines) {
+  if (!sections || typeof sections !== "object") return sections;
+  return {
+    leistungen: (sections.leistungen || []).filter((item) =>
+      isDerivedFromLines(item, lines)
+    ),
+    arbeitskraefte: (sections.arbeitskraefte || []).filter((item) =>
+      isDerivedFromLines(item, lines)
+    ),
+    material: (sections.material || []).filter((item) =>
+      isDerivedFromLines(item, lines)
+    ),
+  };
+}
+
+function isWorkerLine(text) {
+  const value = String(text || "");
+  if (!value.trim()) return false;
+  const hasWorkerWord =
+    /\b(mann|mitarbeiter|arbeiter|monteur|helfer|personal|kolonne|team)\b/i.test(
+      value
+    );
+  const hasHours =
+    /\b\d+(?:[.,]\d+)?\s*(?:h|std\.?|stunden)\b/i.test(value);
+  const hasTime = /\b\d{1,2}[:.]\d{2}\b|\buhr\b/i.test(value);
+  const hasArbeitszeit = /\barbeitszeit\b/i.test(value);
+  const hasVorOrt = /\bvor\s+ort\b/i.test(value);
+
+  if (hasArbeitszeit) return true;
+  if (hasWorkerWord && (hasHours || hasTime || hasVorOrt)) return true;
+  return false;
+}
+
 function isServiceLine(text) {
-  return !/\b(arbeitszeit|pause|stunden|monteur|mitarbeiter|vor\s+ort|uhr|material|geliefert|lieferung|mat\.?)\b/i.test(
-    text || ""
-  );
+  if (isWorkerLine(text)) return false;
+  if (isMaterialLine(text)) return false;
+  return true;
 }
 
 function isMaterialLine(text) {
-  return /\b(material|geliefert|lieferung|mat\.?)\b/i.test(text || "");
+  const value = String(text || "");
+  if (!value.trim()) return false;
+  if (isWorkerLine(value)) return false;
+  if (/\b(material|geliefert|lieferung|mat\.?)\b/i.test(value)) return true;
+  return parseMaterialEntries(value).length > 0;
 }
 
 function normalizeHoursValue(value) {
@@ -275,9 +428,9 @@ function extractHoursInfo(text) {
   );
   if (!hoursMatch) return { hours: null, applyToAll: false };
   const hours = normalizeHoursValue(hoursMatch[1]);
-  const applyToAll = /\bjeweils\b|\bpro\s+person\b|\bje\s*weils\b/i.test(
-    text || ""
-  );
+  const applyToAll =
+    /\bjeweils\b|\bpro\s+person\b|\bje\s*weils\b/i.test(text || "") ||
+    /\bje\s+\d+(?:[.,]\d+)?\s*(?:h|std\.?|stunden)\b/i.test(text || "");
   return { hours, applyToAll };
 }
 
@@ -291,13 +444,24 @@ function parseWorkerEntries(line) {
     text = parts.slice(1).join(" ");
   }
 
-  const pairs = extractNameHourPairs(text);
+  const hoursInfo = extractHoursInfo(text);
+  const pairs = extractNameHourPairs(text).filter((p) => {
+    const name = String(p.name || "").toLowerCase();
+    if (!name) return false;
+    if (/\bje\b|\bjeweils\b/.test(name)) return false;
+    if (
+      /\b(mann|männer|maenner|mitarbeiter|arbeiter|monteur|monteure|helfer|personal|kolonne|team)\b/i.test(
+        name
+      )
+    )
+      return false;
+    return true;
+  });
   if (pairs.length) {
     return pairs.map((p) => ({ group, name: p.name, hours: p.hours }));
   }
 
   const names = extractNames(text);
-  const hoursInfo = extractHoursInfo(text);
   if (names.length) {
     const shouldApply = hoursInfo.applyToAll || names.length === 1;
     return names.map((name) => ({
@@ -305,6 +469,37 @@ function parseWorkerEntries(line) {
       name,
       hours: shouldApply ? hoursInfo.hours : null,
     }));
+  }
+
+  const countMatch = text.match(
+    /(\d+(?:[.,]\d+)?)\s*(?:x|×)?\s*(mann|männer|maenner|mitarbeiter|arbeiter|monteur(?:e)?|helfer|personal|kolonne|team)\b/i
+  );
+  if (countMatch && hoursInfo.hours !== null) {
+    const count = normalizeHoursValue(countMatch[1]);
+    if (count !== null) {
+      const roleRaw = String(countMatch[2] || "").toLowerCase();
+      const roleMap = {
+        "männer": "Mann",
+        maenner: "Mann",
+        mann: "Mann",
+        mitarbeiter: "Mitarbeiter",
+        arbeiter: "Arbeiter",
+        monteur: "Monteur",
+        monteure: "Monteur",
+        helfer: "Helfer",
+        personal: "Personal",
+        kolonne: "Kolonne",
+        team: "Team",
+      };
+      const roleLabel = roleMap[roleRaw] || countMatch[2];
+      return [
+        {
+          group,
+          name: `${count} ${roleLabel}`,
+          hours: hoursInfo.hours * count,
+        },
+      ];
+    }
   }
 
   return [
@@ -351,11 +546,12 @@ function splitSentences(text) {
 
 function extractWorkerLinesFromText(lines) {
   const sentences = splitSentences((lines || []).join(" "));
-  return sentences.filter((s) =>
-    /\bstunden\b|\barbeitszeit\b|\bmonteur\b|\bmitarbeiter\b|\bvor\s+ort\b/i.test(
-      s
-    )
-  );
+  return sentences.filter((s) => isWorkerLine(s));
+}
+
+function extractMaterialLinesFromText(lines) {
+  const sentences = splitSentences((lines || []).join(" "));
+  return sentences.filter((s) => isMaterialLine(s));
 }
 
 function extractLeistungenFromLines(lines) {
@@ -388,16 +584,8 @@ function extractMaterialsFromLines(lines) {
   for (const sentence of sentences) {
     if (!isMaterialLine(sentence)) continue;
     const cleaned = sentence.replace(/^(material\s+geliefert|material)\s*:\s*/i, "");
-    const regex =
-      /(\d+(?:[.,]\d+)?)\s*([A-Za-zÄÖÜäöüßµ²³mM]+)\s+([^,;]+)/g;
-    let match;
-    while ((match = regex.exec(cleaned)) !== null) {
-      results.push({
-        qty: match[1],
-        unit: match[2],
-        desc: match[3].trim(),
-      });
-    }
+    const entries = parseMaterialEntries(cleaned);
+    if (entries.length) results.push(...entries);
   }
   return results;
 }
@@ -405,7 +593,7 @@ function extractMaterialsFromLines(lines) {
 function expandMaterialLines(lines) {
   const results = [];
   for (const line of lines || []) {
-    const entries = extractMaterialsFromLines([line]);
+    const entries = parseMaterialEntries(line);
     if (entries.length) {
       results.push(
         ...entries.map((m) => `${m.qty}; ${m.unit}; ${m.desc}`)
@@ -432,16 +620,43 @@ function mergeUnique(listA, listB, normalizer = normalizeTextForCompare) {
 }
 
 function normalizeReportSections(lines, sections) {
-  const base = sections || parseReportLines(lines);
+  const base = sanitizeSections(sections || parseReportLines(lines), lines);
   const extraLeistungen = extractLeistungenFromLines(lines);
   const extraMaterial = extractMaterialsFromLines(lines);
-  const baseLeistungen = (base.leistungen || []).filter(isServiceLine);
-  const baseMaterial = expandMaterialLines(base.material || []);
+  const baseLeistungenRaw = Array.isArray(base.leistungen) ? base.leistungen : [];
+  const workerLinesFromLeistungen = baseLeistungenRaw.filter(isWorkerLine);
+  const materialLinesFromLeistungen = baseLeistungenRaw.filter(isMaterialLine);
+  const baseLeistungen = baseLeistungenRaw.filter(isServiceLine);
+  const baseWorkerLines = [
+    ...(Array.isArray(base.arbeitskraefte) ? base.arbeitskraefte : []),
+    ...workerLinesFromLeistungen,
+  ];
+  const fallbackWorkerLines = baseWorkerLines.length
+    ? []
+    : extractWorkerLinesFromText(lines);
+  const baseMaterialLines = [
+    ...(Array.isArray(base.material) ? base.material : []),
+    ...materialLinesFromLeistungen,
+  ];
+  const fallbackMaterialLines = baseMaterialLines.length
+    ? []
+    : extractMaterialLinesFromText(lines);
+  const rawMaterialLines = mergeUnique(
+    [...baseMaterialLines, ...fallbackMaterialLines],
+    [],
+    normalizeTextForCompare
+  );
+  const baseMaterial = expandMaterialLines(rawMaterialLines);
   const mergedLeistungen = mergeUnique(baseLeistungen, extraLeistungen);
   const expandedLeistungen = expandLeistungLines(mergedLeistungen);
+  const workerLines = mergeUnique(
+    [...baseWorkerLines, ...fallbackWorkerLines],
+    [],
+    normalizeTextForCompare
+  );
   return {
     leistungen: mergeUnique(expandedLeistungen, []),
-    arbeitskraefte: Array.isArray(base.arbeitskraefte) ? base.arbeitskraefte : [],
+    arbeitskraefte: workerLines,
     material: mergeUnique(
       baseMaterial,
       extraMaterial.map((m) => `${m.qty}; ${m.unit}; ${m.desc}`),

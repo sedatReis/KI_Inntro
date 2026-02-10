@@ -99,8 +99,18 @@ Gib NUR JSON zurueck, ohne Markdown:
 
 Regeln:
 - Teile Inhalte, wenn mehrere Themen in einer Zeile stehen.
-- arbeitskraefte: Personen + Gruppe/FA, wenn erkennbar.
-- material: Menge/Einheit/Bezeichnung, wenn erkennbar.
+- Gib nur Inhalte zurueck, die in den Zeilen vorkommen. Erfinde nichts.
+- arbeitskraefte: Mitarbeiter/Monteur/Mann/Team + Stunden/Arbeitszeit/Schicht/Zeiten.
+  Normalisiere das Format:
+  - Anzahl: "<Anzahl> Mann je <Stunden>h" (z.B. "2 Mann je 12h")
+  - Person: "<Name> <Stunden>h" (z.B. "Mueller 8h")
+  - Optional Gruppe/FA: "<Gruppe>; <Name> <Stunden>h"
+  Teile mehrere Personen in einzelne Eintraege.
+- material: Menge + Einheit + Bezeichnung. Normalisiere zu "Menge; Einheit; Bezeichnung".
+  Beispiele: "10; m; Rohr", "3; Stk; Duebel", "1,5; l; Farbe".
+  Wenn "Material" oder "Lieferung" erwaehnt wird, als material.
+  Teile mehrere Materialien in einzelne Eintraege.
+- leistungen: ausgefuehrte Taetigkeiten ohne Personal- oder Materialangaben.
 - Wenn unklar, ordne als leistungen ein.
 
 Zeilen:
