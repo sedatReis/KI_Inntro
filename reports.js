@@ -627,6 +627,22 @@ function normalizeWorkerRoleLabel(roleText) {
   return genericRoles.has(roleLabel) ? "Mitarbeiter" : roleLabel;
 }
 
+function sanitizeWorkerDisplayName(name) {
+  let value = String(name || "").trim();
+  if (!value) return "";
+
+  value = value.replace(
+    /\s*(?:,|;|:)?\s*(?:je|jeweils)\s+\d+(?:[.,]\d+)?\s*(?:h|std\.?|stunden)\b\.?\s*$/i,
+    ""
+  );
+  value = value.replace(
+    /\s*(?:,|;|:)?\s*\d+(?:[.,]\d+)?\s*(?:h|std\.?|stunden)\b\.?\s*$/i,
+    ""
+  );
+
+  return value.trim();
+}
+
 function parseWorkerEntries(line) {
   if (!line || !String(line).trim()) return [];
   const parts = line.split(";").map((p) => p.trim()).filter(Boolean);
@@ -700,7 +716,7 @@ function aggregateWorkers(entries) {
   const list = Array.isArray(entries) ? entries : [];
   for (let idx = 0; idx < list.length; idx += 1) {
     const entry = list[idx];
-    const name = String(entry.name || "").trim();
+    const name = sanitizeWorkerDisplayName(entry.name);
     if (!name) continue;
     const key = entry._noAggregate
       ? `${name.toLowerCase()}__${idx}`
