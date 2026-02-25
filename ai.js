@@ -102,11 +102,12 @@ Regeln:
 - Gib nur Inhalte zurueck, die in den Zeilen vorkommen. Erfinde nichts.
 - Die Zeilen kommen ab jetzt in dieser Reihenfolge: zuerst leistungen, dann arbeitskraefte, dann material.
   Wenn keine Labels vorhanden sind, nutze die Reihenfolge zur Zuordnung.
-- arbeitskraefte: Mitarbeiter/Monteur/Mann/Team + Stunden/Arbeitszeit/Schicht/Zeiten.
+- arbeitskraefte: Mitarbeiter/Berufsgruppe (z.B. Monteur, Installateur, Elektriker, Helfer, Team) + Stunden/Arbeitszeit/Schicht/Zeiten.
   Normalisiere das Format:
-  - Anzahl: "<Anzahl> Mann je <Stunden>h" (z.B. "2 Mann je 12h")
+  - Anzahl: "<Anzahl> <Rolle> je <Stunden>h" (z.B. "2 Monteure je 12h", "2 Installateure je 4h")
   - Person: "<Name> <Stunden>h" (z.B. "Mueller 8h")
   - Optional Gruppe/FA: "<Gruppe>; <Name> <Stunden>h"
+  - Wenn in der Quelle "je 4" / "je 8" ohne Einheit steht und es um arbeitskraefte geht, als Stunden verstehen und mit "h" ausgeben.
   Teile mehrere Personen in einzelne Eintraege.
 - material: Menge + Einheit + Bezeichnung. Normalisiere zu "Menge; Einheit; Bezeichnung".
   Beispiele: "10; m; Rohr", "3; Stk; Duebel", "1,5; l; Farbe".

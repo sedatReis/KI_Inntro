@@ -428,9 +428,19 @@ function isWorkerLine(text) {
   const hasTime = /\b\d{1,2}[:.]\d{2}\b|\buhr\b/i.test(value);
   const hasArbeitszeit = /\barbeitszeit\b/i.test(value);
   const hasVorOrt = /\bvor\s+ort\b/i.test(value);
+  const hasCountRoleJeHours = /\b\d+(?:[.,]\d+)?\s+(?!m[²2]\b)(?:[a-zäöüß][\p{L}äöüß.-]*)(?:\s+[a-zäöüß][\p{L}äöüß.-]*){0,2}\s+je(?:weils)?\s+\d+(?:[.,]\d+)?(?:\s*(?:h|std\.?|stunden))?\b/iu.test(
+    normalizedValue
+  );
+  const hasRoleCountHours = /\b\d+(?:[.,]\d+)?\s+(?!m[²2]\b)(?:[a-zäöüß][\p{L}äöüß.-]*)(?:\s+[a-zäöüß][\p{L}äöüß.-]*){0,2}\b/i.test(
+    normalizedValue
+  ) && hasHours;
+  const hasNamedPeopleWithHours = extractNameHourPairs(value).length > 0;
 
   if (hasArbeitszeit) return true;
   if (hasWorkerWord && (hasHours || hasTime || hasVorOrt)) return true;
+  if (hasCountRoleJeHours) return true;
+  if (hasNamedPeopleWithHours) return true;
+  if (hasVorOrt && hasRoleCountHours) return true;
   return false;
 }
 
@@ -536,17 +546,85 @@ function extractNames(text) {
 
 function extractHoursInfo(text) {
   const normalizedText = replaceNumberWords(text);
-  const hoursMatch = String(normalizedText || "").match(
+  let hoursMatch = String(normalizedText || "").match(
     /(\d+(?:[.,]\d+)?)\s*(?:h|std\.?|stunden)\b/i
   );
+  let inferredFromJe = false;
+  if (!hoursMatch) {
+    // Accept shorthand like "2 Installateure je 4" in worker lines.
+    hoursMatch = String(normalizedText || "").match(
+      /\b(?:je|jeweils)\s+(\d+(?:[.,]\d+)?)\b/i
+    );
+    inferredFromJe = Boolean(hoursMatch);
+  }
   if (!hoursMatch) return { hours: null, applyToAll: false };
   const hours = normalizeHoursValue(hoursMatch[1]);
   const applyToAll =
+    inferredFromJe ||
     /\bjeweils\b|\bpro\s+person\b|\bje\s*weils\b/i.test(text || "") ||
-    /\bje\s+\d+(?:[.,]\d+)?\s*(?:h|std\.?|stunden)\b/i.test(
+    /\bje\s+\d+(?:[.,]\d+)?(?:\s*(?:h|std\.?|stunden))?\b/i.test(
       normalizedText || ""
     );
   return { hours, applyToAll };
+}
+
+function normalizeWorkerRoleLabel(roleText) {
+  const cleaned = String(roleText || "")
+    .trim()
+    .replace(/[.,;:]+$/g, "");
+  if (!cleaned) return "Mitarbeiter";
+
+  const roleKey = normalizeNumberWord(cleaned)
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+  const roleMap = {
+    "männer": "Mann",
+    maenner: "Mann",
+    mann: "Mann",
+    mitarbeiter: "Mitarbeiter",
+    arbeiter: "Arbeiter",
+    monteur: "Monteur",
+    monteure: "Monteur",
+    installateur: "Installateur",
+    installateure: "Installateur",
+    helfer: "Helfer",
+    personal: "Personal",
+    kolonne: "Kolonne",
+    team: "Team",
+    ma: "Mitarbeiter",
+  };
+
+  const genericRoles = new Set([
+    "Mann",
+    "Mitarbeiter",
+    "Arbeiter",
+    "Helfer",
+    "Personal",
+    "Kolonne",
+    "Team",
+  ]);
+
+  let roleLabel = roleMap[roleKey];
+  if (!roleLabel) {
+    roleLabel = cleaned
+      .split(/\s+/)
+      .map((part) => {
+        let token = String(part || "");
+        if (/eure$/i.test(token)) {
+          token = token.replace(/eure$/i, (m) =>
+            m[0] === "E" ? "Eur" : "eur"
+          );
+        }
+        if (/^[a-zäöüß]/.test(token)) {
+          token = token.charAt(0).toUpperCase() + token.slice(1);
+        }
+        return token;
+      })
+      .join(" ");
+  }
+
+  return genericRoles.has(roleLabel) ? "Mitarbeiter" : roleLabel;
 }
 
 function parseWorkerEntries(line) {
@@ -587,37 +665,18 @@ function parseWorkerEntries(line) {
   }
 
   const normalizedText = replaceNumberWords(text);
-  const countMatch = normalizedText.match(
+  let countMatch = normalizedText.match(
     /(\d+(?:[.,]\d+)?)\s*(?:x|×)?\s*(mann|männer|maenner|mitarbeiter|arbeiter|monteur(?:e)?|helfer|personal|kolonne|team)\b/i
   );
+  if (!countMatch) {
+    countMatch = normalizedText.match(
+      /(\d+(?:[.,]\d+)?)\s*(?:x|×)?\s*([a-zäöüß][\p{L}äöüß.-]*(?:\s+[a-zäöüß][\p{L}äöüß.-]*){0,2})\s*(?=je(?:weils)?\b)/iu
+    );
+  }
   if (countMatch && hoursInfo.hours !== null) {
     const count = normalizeHoursValue(countMatch[1]);
     if (count !== null && Number.isInteger(count) && count > 0) {
-      const roleRaw = String(countMatch[2] || "").toLowerCase();
-      const roleMap = {
-        "männer": "Mann",
-        maenner: "Mann",
-        mann: "Mann",
-        mitarbeiter: "Mitarbeiter",
-        arbeiter: "Arbeiter",
-        monteur: "Monteur",
-        monteure: "Monteur",
-        helfer: "Helfer",
-        personal: "Personal",
-        kolonne: "Kolonne",
-        team: "Team",
-      };
-      const roleLabel = roleMap[roleRaw] || countMatch[2];
-      const genericRoles = new Set([
-        "Mann",
-        "Mitarbeiter",
-        "Arbeiter",
-        "Helfer",
-        "Personal",
-        "Kolonne",
-        "Team",
-      ]);
-      const baseLabel = genericRoles.has(roleLabel) ? "Mitarbeiter" : roleLabel;
+      const baseLabel = normalizeWorkerRoleLabel(countMatch[2]);
       return Array.from({ length: count }, (_, idx) => ({
         group,
         name: `${baseLabel} ${idx + 1}`,
