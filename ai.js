@@ -100,6 +100,8 @@ Gib NUR JSON zurueck, ohne Markdown:
 Regeln:
 - Teile Inhalte, wenn mehrere Themen in einer Zeile stehen.
 - Gib nur Inhalte zurueck, die in den Zeilen vorkommen. Erfinde nichts.
+- Die Zeilen kommen ab jetzt in dieser Reihenfolge: zuerst leistungen, dann arbeitskraefte, dann material.
+  Wenn keine Labels vorhanden sind, nutze die Reihenfolge zur Zuordnung.
 - arbeitskraefte: Mitarbeiter/Monteur/Mann/Team + Stunden/Arbeitszeit/Schicht/Zeiten.
   Normalisiere das Format:
   - Anzahl: "<Anzahl> Mann je <Stunden>h" (z.B. "2 Mann je 12h")

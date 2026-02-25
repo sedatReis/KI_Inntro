@@ -128,7 +128,7 @@ function splitReportLine(raw) {
   if (!line.trim()) return [];
 
   line = line.replace(
-    /(AK:|MAT:|MATERIAL:|LEISTUNG:|LEISTUNGEN:|ERGEBNIS:|ERGEBNISSE:)/gi,
+    /(AK:|MAT:|MATERIAL:|MATERIALIEN:|DIENSTLEISTUNG:|DIENSTLEISTUNGEN:|LEISTUNG:|LEISTUNGEN:|MITARBEITER:|ARBEITSKRAEFTE:|ARBEITSKRÄFTE:|ERGEBNIS:|ERGEBNISSE:)/gi,
     "\n$1"
   );
   line = line.replace(/\bAK\b(?!\s*:)/gi, "\nAK:");
@@ -145,40 +145,113 @@ function splitReportLine(raw) {
     .filter(Boolean);
 }
 
+function stripLeadingBullet(text) {
+  return String(text || "")
+    .replace(/^\s*(?:[-*•]\s*)+/g, "")
+    .trim();
+}
+
+function normalizeHeaderToken(text) {
+  return stripLeadingBullet(text)
+    .toLowerCase()
+    .replace(/[:.\s]+$/g, "")
+    .trim();
+}
+
+const SECTION_HEADER_MAP = {
+  ak: "arbeitskraefte",
+  arbeitskraefte: "arbeitskraefte",
+  "arbeitskräfte": "arbeitskraefte",
+  mitarbeiter: "arbeitskraefte",
+  personal: "arbeitskraefte",
+  team: "arbeitskraefte",
+  dienstleistung: "leistungen",
+  dienstleistungen: "leistungen",
+  leistung: "leistungen",
+  leistungen: "leistungen",
+  ergebnis: "leistungen",
+  ergebnisse: "leistungen",
+  material: "material",
+  materialien: "material",
+  mat: "material",
+};
+
+function detectSectionHeader(text) {
+  const token = normalizeHeaderToken(text);
+  return SECTION_HEADER_MAP[token] || null;
+}
+
+function stripHeaderPrefix(text) {
+  return stripLeadingBullet(text).replace(
+    /^(ak|arbeitskraefte|arbeitskräfte|mitarbeiter|personal|team|dienstleistung(?:en)?|leistung(?:en)?|ergebnis(?:se)?|material(?:ien)?|mat)\s*:?\s*/i,
+    ""
+  );
+}
+
+function extractSectionPrefix(text) {
+  const value = stripLeadingBullet(text);
+  const match = value.match(
+    /^(ak|arbeitskraefte|arbeitskräfte|mitarbeiter|personal|team|dienstleistung(?:en)?|leistung(?:en)?|ergebnis(?:se)?|material(?:ien)?|mat)\s*:\s*(.*)$/i
+  );
+  if (!match) return null;
+  const section = detectSectionHeader(match[1]);
+  if (!section) return null;
+  return { section, content: String(match[2] || "").trim() };
+}
+
+function isSectionHeaderLine(text) {
+  return Boolean(detectSectionHeader(text));
+}
+
 function parseReportLines(lines) {
   const sections = {
     leistungen: [],
     arbeitskraefte: [],
     material: [],
   };
+  let currentSection = null;
 
   for (const raw of lines) {
     const fragments = splitReportLine(raw);
     for (const line of fragments) {
-    const lower = line.toLowerCase();
-    if (lower.startsWith("ak:") || lower.startsWith("ak ")) {
-      sections.arbeitskraefte.push(line.replace(/^ak[:\s]*/i, ""));
-      continue;
-    }
-    if (
-      lower.startsWith("mat:") ||
-      lower.startsWith("material:") ||
-      lower.startsWith("material ")
-    ) {
-      sections.material.push(line.replace(/^(mat|material)[:\s]*/i, ""));
-      continue;
-    }
-    if (
-      lower.startsWith("lei:") ||
-      lower.startsWith("leistung:") ||
-      lower.startsWith("leistungen:") ||
-      lower.startsWith("ergebnis:") ||
-      lower.startsWith("ergebnisse:")
-    ) {
-      sections.leistungen.push(line.replace(/^(lei|leistung|leistungen|ergebnis|ergebnisse)[:\s]*/i, ""));
-      continue;
-    }
-      sections.leistungen.push(line);
+      const trimmed = String(line || "").trim();
+      if (!trimmed) continue;
+      const prefixed = extractSectionPrefix(trimmed);
+      if (prefixed) {
+        currentSection = prefixed.section;
+        if (prefixed.content) {
+          sections[prefixed.section].push(stripLeadingBullet(prefixed.content));
+        }
+        continue;
+      }
+      const headerSection = detectSectionHeader(trimmed);
+      if (headerSection) {
+        currentSection = headerSection;
+        const content = stripHeaderPrefix(trimmed).trim();
+        if (content) sections[headerSection].push(content);
+        continue;
+      }
+
+      const cleaned = stripLeadingBullet(trimmed);
+      if (isWorkerLine(cleaned)) {
+        sections.arbeitskraefte.push(cleaned);
+        currentSection = "arbeitskraefte";
+        continue;
+      }
+      if (isMaterialLine(cleaned)) {
+        sections.material.push(cleaned);
+        currentSection = "material";
+        continue;
+      }
+
+      if (currentSection === "arbeitskraefte") {
+        sections.arbeitskraefte.push(cleaned);
+      } else if (currentSection === "material") {
+        sections.material.push(cleaned);
+      } else {
+        sections.leistungen.push(cleaned);
+        currentSection = "leistungen";
+      }
     }
   }
 
@@ -314,7 +387,7 @@ function parseMaterialLine(line) {
 function normalizeTextForCompare(text) {
   return String(text || "")
     .toLowerCase()
-    .replace(/[.,;:()]/g, " ")
+    .replace(/[.,;:()•·]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -331,28 +404,27 @@ function isDerivedFromLines(item, lines) {
 
 function sanitizeSections(sections, lines) {
   if (!sections || typeof sections !== "object") return sections;
+  const filterItems = (items) =>
+    (items || []).filter(
+      (item) => isDerivedFromLines(item, lines) && !isSectionHeaderLine(item)
+    );
   return {
-    leistungen: (sections.leistungen || []).filter((item) =>
-      isDerivedFromLines(item, lines)
-    ),
-    arbeitskraefte: (sections.arbeitskraefte || []).filter((item) =>
-      isDerivedFromLines(item, lines)
-    ),
-    material: (sections.material || []).filter((item) =>
-      isDerivedFromLines(item, lines)
-    ),
+    leistungen: filterItems(sections.leistungen),
+    arbeitskraefte: filterItems(sections.arbeitskraefte),
+    material: filterItems(sections.material),
   };
 }
 
 function isWorkerLine(text) {
   const value = String(text || "");
   if (!value.trim()) return false;
+  const normalizedValue = replaceNumberWords(value);
   const hasWorkerWord =
     /\b(mann|mitarbeiter|arbeiter|monteur|helfer|personal|kolonne|team)\b/i.test(
       value
     );
   const hasHours =
-    /\b\d+(?:[.,]\d+)?\s*(?:h|std\.?|stunden)\b/i.test(value);
+    /\b\d+(?:[.,]\d+)?\s*(?:h|std\.?|stunden)\b/i.test(normalizedValue);
   const hasTime = /\b\d{1,2}[:.]\d{2}\b|\buhr\b/i.test(value);
   const hasArbeitszeit = /\barbeitszeit\b/i.test(value);
   const hasVorOrt = /\bvor\s+ort\b/i.test(value);
@@ -380,6 +452,46 @@ function normalizeHoursValue(value) {
   if (value === undefined || value === null || value === "") return null;
   const num = Number(String(value).replace(",", "."));
   return Number.isFinite(num) ? num : null;
+}
+
+const NUMBER_WORDS = {
+  eins: 1,
+  eine: 1,
+  ein: 1,
+  einen: 1,
+  einem: 1,
+  einer: 1,
+  zwei: 2,
+  drei: 3,
+  vier: 4,
+  fuenf: 5,
+  sechs: 6,
+  sieben: 7,
+  acht: 8,
+  neun: 9,
+  zehn: 10,
+  elf: 11,
+  zwoelf: 12,
+};
+
+const NUMBER_WORD_REGEX =
+  /\b(eins|eine|ein|einen|einem|einer|zwei|drei|vier|fuenf|fünf|sechs|sieben|acht|neun|zehn|elf|zwoelf|zwölf)\b/gi;
+
+function normalizeNumberWord(word) {
+  return String(word || "")
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss");
+}
+
+function replaceNumberWords(text) {
+  return String(text || "").replace(NUMBER_WORD_REGEX, (match) => {
+    const key = normalizeNumberWord(match);
+    const value = NUMBER_WORDS[key];
+    return value === undefined ? match : String(value);
+  });
 }
 
 function extractNameHourPairs(text) {
@@ -423,14 +535,17 @@ function extractNames(text) {
 }
 
 function extractHoursInfo(text) {
-  const hoursMatch = String(text || "").match(
+  const normalizedText = replaceNumberWords(text);
+  const hoursMatch = String(normalizedText || "").match(
     /(\d+(?:[.,]\d+)?)\s*(?:h|std\.?|stunden)\b/i
   );
   if (!hoursMatch) return { hours: null, applyToAll: false };
   const hours = normalizeHoursValue(hoursMatch[1]);
   const applyToAll =
     /\bjeweils\b|\bpro\s+person\b|\bje\s*weils\b/i.test(text || "") ||
-    /\bje\s+\d+(?:[.,]\d+)?\s*(?:h|std\.?|stunden)\b/i.test(text || "");
+    /\bje\s+\d+(?:[.,]\d+)?\s*(?:h|std\.?|stunden)\b/i.test(
+      normalizedText || ""
+    );
   return { hours, applyToAll };
 }
 
@@ -471,12 +586,13 @@ function parseWorkerEntries(line) {
     }));
   }
 
-  const countMatch = text.match(
+  const normalizedText = replaceNumberWords(text);
+  const countMatch = normalizedText.match(
     /(\d+(?:[.,]\d+)?)\s*(?:x|×)?\s*(mann|männer|maenner|mitarbeiter|arbeiter|monteur(?:e)?|helfer|personal|kolonne|team)\b/i
   );
   if (countMatch && hoursInfo.hours !== null) {
     const count = normalizeHoursValue(countMatch[1]);
-    if (count !== null) {
+    if (count !== null && Number.isInteger(count) && count > 0) {
       const roleRaw = String(countMatch[2] || "").toLowerCase();
       const roleMap = {
         "männer": "Mann",
@@ -492,13 +608,22 @@ function parseWorkerEntries(line) {
         team: "Team",
       };
       const roleLabel = roleMap[roleRaw] || countMatch[2];
-      return [
-        {
-          group,
-          name: `${count} ${roleLabel}`,
-          hours: hoursInfo.hours * count,
-        },
-      ];
+      const genericRoles = new Set([
+        "Mann",
+        "Mitarbeiter",
+        "Arbeiter",
+        "Helfer",
+        "Personal",
+        "Kolonne",
+        "Team",
+      ]);
+      const baseLabel = genericRoles.has(roleLabel) ? "Mitarbeiter" : roleLabel;
+      return Array.from({ length: count }, (_, idx) => ({
+        group,
+        name: `${baseLabel} ${idx + 1}`,
+        hours: hoursInfo.hours,
+        _noAggregate: true,
+      }));
     }
   }
 
@@ -513,10 +638,14 @@ function parseWorkerEntries(line) {
 
 function aggregateWorkers(entries) {
   const map = new Map();
-  for (const entry of entries || []) {
+  const list = Array.isArray(entries) ? entries : [];
+  for (let idx = 0; idx < list.length; idx += 1) {
+    const entry = list[idx];
     const name = String(entry.name || "").trim();
     if (!name) continue;
-    const key = name.toLowerCase();
+    const key = entry._noAggregate
+      ? `${name.toLowerCase()}__${idx}`
+      : name.toLowerCase();
     const existing = map.get(key) || {
       name,
       group: String(entry.group || "").trim(),
@@ -556,16 +685,22 @@ function extractMaterialLinesFromText(lines) {
 
 function extractLeistungenFromLines(lines) {
   const sentences = splitSentences((lines || []).join(" "));
-  return expandLeistungLines(sentences);
+  return expandLeistungLines(sentences.filter((s) => !isSectionHeaderLine(s)));
 }
 
 function expandLeistungLines(lines) {
   const results = [];
   for (const line of lines || []) {
     if (!isServiceLine(line)) continue;
-    let cleaned = String(line || "")
-      .replace(/^(zusatzleistung|leistung|leistungen|ergebnis|ergebnisse)\s*:\s*/i, "")
+    let cleaned = stripLeadingBullet(String(line || ""))
+      .replace(
+        /^(dienstleistung(?:en)?|zusatzleistung(?:en)?|leistung(?:en)?|ergebnis(?:se)?)\s*:?\s*/i,
+        ""
+      )
       .trim();
+    cleaned = stripLeadingBullet(cleaned)
+      .trim();
+    if (!cleaned || isSectionHeaderLine(cleaned)) continue;
     if (!cleaned) continue;
     const parts = cleaned
       .split(",")
@@ -620,7 +755,39 @@ function mergeUnique(listA, listB, normalizer = normalizeTextForCompare) {
 }
 
 function normalizeReportSections(lines, sections) {
-  const base = sanitizeSections(sections || parseReportLines(lines), lines);
+  const parsed = parseReportLines(lines);
+  const parsedClean = sanitizeSections(parsed, lines) || parsed;
+  const parsedIndex = new Set(
+    [
+      ...(parsedClean.leistungen || []),
+      ...(parsedClean.arbeitskraefte || []),
+      ...(parsedClean.material || []),
+    ].map((item) => normalizeTextForCompare(item))
+  );
+  let base = parsedClean;
+  if (sections) {
+    const aiClean = sanitizeSections(sections, lines);
+    if (aiClean) {
+      const addIfNew = (items) =>
+        (items || []).filter(
+          (item) => !parsedIndex.has(normalizeTextForCompare(item))
+        );
+      base = {
+        leistungen: mergeUnique(
+          parsedClean.leistungen || [],
+          addIfNew(aiClean.leistungen)
+        ),
+        arbeitskraefte: mergeUnique(
+          parsedClean.arbeitskraefte || [],
+          addIfNew(aiClean.arbeitskraefte)
+        ),
+        material: mergeUnique(
+          parsedClean.material || [],
+          addIfNew(aiClean.material)
+        ),
+      };
+    }
+  }
   const extraLeistungen = extractLeistungenFromLines(lines);
   const extraMaterial = extractMaterialsFromLines(lines);
   const baseLeistungenRaw = Array.isArray(base.leistungen) ? base.leistungen : [];
@@ -674,6 +841,11 @@ function fillRange(sheet, startRow, endRow, col, values) {
   }
 }
 
+function cloneStyle(style) {
+  if (!style || typeof style !== "object") return {};
+  return JSON.parse(JSON.stringify(style));
+}
+
 function ensureLeistungenColumns(sheet, startRow, endRow, leftRange, rightRange) {
   for (let row = startRow; row <= endRow; row += 1) {
     const mergedAddress = `${leftRange.startCol}${row}:${rightRange.endCol}${row}`;
@@ -691,6 +863,8 @@ function fillLeistungenTwoColumns(sheet, startRow, endRow, values) {
   const maxRows = endRow - startRow + 1;
   const leftValues = values.slice(0, maxRows);
   const rightValues = values.slice(maxRows, maxRows * 2);
+  const leftBaseStyle = cloneStyle(sheet.getCell(`A${startRow}`).style);
+  const rightBaseStyle = cloneStyle(sheet.getCell(`G${startRow}`).style);
 
   ensureLeistungenColumns(
     sheet,
@@ -699,6 +873,11 @@ function fillLeistungenTwoColumns(sheet, startRow, endRow, values) {
     { startCol: "A", endCol: "F" },
     { startCol: "G", endCol: "K" }
   );
+
+  for (let row = startRow; row <= endRow; row += 1) {
+    sheet.getCell(`A${row}`).style = cloneStyle(leftBaseStyle);
+    sheet.getCell(`G${row}`).style = cloneStyle(rightBaseStyle);
+  }
 
   fillRange(sheet, startRow, endRow, "A", leftValues);
   fillRange(sheet, startRow, endRow, "G", rightValues);
