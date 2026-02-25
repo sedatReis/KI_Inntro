@@ -896,8 +896,21 @@ function normalizeReportSections(lines, sections) {
     [],
     normalizeTextForCompare
   );
+  const workerLineKeys = new Set(
+    workerLines.map((line) => normalizeTextForCompare(line)).filter(Boolean)
+  );
+  const materialLineKeys = new Set(
+    rawMaterialLines.map((line) => normalizeTextForCompare(line)).filter(Boolean)
+  );
+  const cleanedLeistungen = expandedLeistungen.filter((item) => {
+    const key = normalizeTextForCompare(item);
+    if (!key) return false;
+    if (workerLineKeys.has(key)) return false;
+    if (materialLineKeys.has(key)) return false;
+    return true;
+  });
   return {
-    leistungen: mergeUnique(expandedLeistungen, []),
+    leistungen: mergeUnique(cleanedLeistungen, []),
     arbeitskraefte: workerLines,
     material: mergeUnique(
       baseMaterial,
