@@ -1,7 +1,8 @@
 const axios = require("axios");
 
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434/api/generate";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3";
+const OLLAMA_CHAT_URL = process.env.OLLAMA_CHAT_URL || "http://localhost:11434/api/chat";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:14b";
 
 async function ollama(prompt) {
   const { data } = await axios.post(
@@ -10,6 +11,208 @@ async function ollama(prompt) {
     { timeout: 120000 }
   );
   return (data.response || "").trim();
+}
+
+async function ollamaChat(messages) {
+  const { data } = await axios.post(
+    OLLAMA_CHAT_URL,
+    { model: OLLAMA_MODEL, messages, stream: false },
+    { timeout: 120000 }
+  );
+  return (data.message?.content || "").trim();
+}
+
+function buildRBSystemPrompt({ projectCode, projectName, client, rulesBlock }) {
+  return `Du bist ein Baustellenassistent fuer Regieberichte. Du hilfst dem Benutzer, einen Regiebericht zu erstellen.
+
+Deine Aufgabe:
+1. Verstehe natuerliche Sprache und extrahiere daraus Berichtsdaten
+2. Ordne Informationen in drei Kategorien ein:
+   - leistungen: ausgefuehrte Taetigkeiten/Arbeiten (kurz und praegnant)
+   - arbeitskraefte: Personal mit Stunden (Format: "<Anzahl> <Rolle> je <Stunden>h" z.B. "2 Monteure je 8h" oder "<Name> <Stunden>h")
+   - material: verwendetes Material (Format: "<Menge>; <Einheit>; <Bezeichnung>" z.B. "10; m; Kupferrohr")
+3. Bestaetige was du verstanden hast und zeige den aktuellen Stand
+4. Stelle Rueckfragen wenn wichtige Informationen fehlen (z.B. Stunden, Anzahl Mitarbeiter)
+5. Wenn der Benutzer Korrekturen macht, passe die Daten entsprechend an
+
+Antworte IMMER in der Sprache des Benutzers.
+
+Antworte IMMER exakt in diesem Format:
+---RESPONSE---
+<Deine natuerliche Antwort an den Benutzer - kurz, klar, mit aktuellem Stand>
+---DATA---
+{"leistungen":[...],"arbeitskraefte":[...],"material":[...]}
+
+WICHTIG: Der DATA-Block muss IMMER den VOLLSTAENDIGEN aktuellen Stand aller drei Kategorien enthalten (nicht nur neue Eintraege).
+Wenn nichts geaendert wurde, gib den bisherigen Stand zurueck.
+Gib im DATA-Block NUR valides JSON zurueck, ohne Markdown-Formatierung.
+${rulesBlock ? "\n" + rulesBlock : ""}
+
+Projekt: ${projectCode}${projectName ? " - " + projectName : ""}
+${client ? "Auftraggeber: " + client : ""}`.trim();
+}
+
+function buildBTBSystemPrompt({ projectCode, projectName, client, rulesBlock }) {
+  return `Du bist ein Baustellenassistent fuer Bautagesberichte (BTB). Du hilfst dem Benutzer, einen Bautagesbericht zu erstellen.
+
+Deine Aufgabe:
+1. Verstehe natuerliche Sprache und extrahiere daraus Berichtsdaten
+2. Ordne Informationen in drei Kategorien ein:
+   - leistungen: ausgefuehrte Taetigkeiten/Arbeiten des Tages (kurz und praegnant, max 10 Eintraege)
+   - arbeitskraefte: Personal mit Anzahl und Rolle (Format: "<Anzahl> <Rolle>" z.B. "5 Monteure", "2 Helfer", "1 Polier", "3 Bau-FA")
+     Bekannte Rollen: Projektleiter, Bauleiter, Polier, gehob.Bau-FA, Spezialbau-FA, Werkpolier, Bauvorarbeiter, Bau-FA, Baufachwerker, Bauwerker, Maschinist, Kranfahrer, Fremdfirmen, Monteur, Installateur, Helfer
+   - material: verwendetes/geliefertes Material (Format: "<Menge>; <Einheit>; <Bezeichnung>" z.B. "10; m; Kupferrohr")
+3. Bestaetige was du verstanden hast und zeige den aktuellen Stand
+4. Stelle Rueckfragen wenn wichtige Informationen fehlen
+5. Wenn der Benutzer Korrekturen macht, passe die Daten entsprechend an
+
+Ein Bautagesbericht dokumentiert den gesamten Tagesablauf auf der Baustelle:
+- Alle ausgefuehrten Leistungen/Arbeiten
+- Alle anwesenden Arbeitskraefte nach Rolle/Gewerk
+- Alles verwendete/angelieferte Material
+
+Antworte IMMER in der Sprache des Benutzers.
+
+Antworte IMMER exakt in diesem Format:
+---RESPONSE---
+<Deine natuerliche Antwort an den Benutzer - kurz, klar, mit aktuellem Stand>
+---DATA---
+{"leistungen":[...],"arbeitskraefte":[...],"material":[...]}
+
+WICHTIG: Der DATA-Block muss IMMER den VOLLSTAENDIGEN aktuellen Stand aller drei Kategorien enthalten.
+Gib im DATA-Block NUR valides JSON zurueck, ohne Markdown-Formatierung.
+${rulesBlock ? "\n" + rulesBlock : ""}
+
+Projekt: ${projectCode}${projectName ? " - " + projectName : ""}
+${client ? "Auftraggeber: " + client : ""}`.trim();
+}
+
+function buildReportSystemPrompt({ type, projectCode, projectName, client, rulesBlock }) {
+  if (type === "BTB") {
+    return buildBTBSystemPrompt({ projectCode, projectName, client, rulesBlock });
+  }
+  return buildRBSystemPrompt({ projectCode, projectName, client, rulesBlock });
+}
+
+async function detectIntent(userText) {
+  const prompt = `Analysiere die folgende Nachricht und bestimme die Absicht des Benutzers.
+
+Moegliche Absichten:
+1. "project_creation" - Der Benutzer will ein neues Bauprojekt/Bauvorhaben erstellen
+2. "general_chat" - Allgemeine Frage oder Unterhaltung
+
+Wenn "project_creation": Extrahiere alle genannten Felder:
+- kuerzel: Projektkuerzel/Code
+- name: Projektname
+- contactName: Ansprechperson
+- contactEmail: E-Mail
+- cc: CC E-Mail
+- client: Auftraggeber
+
+Gib NUR JSON zurueck, ohne Markdown:
+{"intent":"project_creation|general_chat","fields":{"kuerzel":"","name":"","contactName":"","contactEmail":"","cc":"","client":""}}
+
+Nachricht: "${userText}"`;
+
+  const raw = await ollama(prompt);
+  try {
+    const jsonText = raw.trim().replace(/^```json\s*|```\s*$/g, "").trim();
+    return JSON.parse(jsonText);
+  } catch (e) {
+    return { intent: "general_chat", fields: {} };
+  }
+}
+
+async function chatReportAI({ systemPrompt, conversationHistory, userMessage }) {
+  const messages = [
+    { role: "system", content: systemPrompt },
+    ...conversationHistory,
+    { role: "user", content: userMessage }
+  ];
+
+  const fullResponse = await ollamaChat(messages);
+
+  // Parse structured response
+  let responsePart = fullResponse;
+  let reportData = null;
+
+  const responseIdx = fullResponse.indexOf("---RESPONSE---");
+  const dataIdx = fullResponse.indexOf("---DATA---");
+
+  function extractJSON(dataPart) {
+    // Remove markdown code fences
+    let jsonText = dataPart.replace(/^```json\s*/g, "").replace(/```\s*$/g, "").trim();
+    // Extract first valid JSON object using brace matching
+    const start = jsonText.indexOf("{");
+    if (start < 0) return null;
+    let depth = 0;
+    let end = -1;
+    for (let i = start; i < jsonText.length; i++) {
+      if (jsonText[i] === "{") depth++;
+      else if (jsonText[i] === "}") depth--;
+      if (depth === 0) { end = i; break; }
+    }
+    if (end < 0) return null;
+    return jsonText.substring(start, end + 1);
+  }
+
+  function parseReportJSON(dataPart) {
+    try {
+      const jsonText = extractJSON(dataPart);
+      if (!jsonText) return null;
+      const parsed = JSON.parse(jsonText);
+      return {
+        leistungen: Array.isArray(parsed.leistungen) ? parsed.leistungen : [],
+        arbeitskraefte: Array.isArray(parsed.arbeitskraefte) ? parsed.arbeitskraefte : [],
+        material: Array.isArray(parsed.material) ? parsed.material : [],
+      };
+    } catch (e) {
+      console.error("[CHAT-REPORT-AI] JSON parse error:", e.message);
+      return null;
+    }
+  }
+
+  if (responseIdx >= 0 && dataIdx >= 0) {
+    responsePart = fullResponse.substring(responseIdx + "---RESPONSE---".length, dataIdx).trim();
+    const dataPart = fullResponse.substring(dataIdx + "---DATA---".length).trim();
+    reportData = parseReportJSON(dataPart);
+  } else if (dataIdx >= 0) {
+    responsePart = fullResponse.substring(0, dataIdx).trim();
+    const dataPart = fullResponse.substring(dataIdx + "---DATA---".length).trim();
+    reportData = parseReportJSON(dataPart);
+  }
+
+  return { response: responsePart, reportData };
+}
+
+async function extractRuleFromCorrection({ userMessage, previousData, correctedData }) {
+  const prompt = `Der Benutzer hat eine Korrektur an einem Baustellenbericht vorgenommen.
+
+Vorherige Daten: ${JSON.stringify(previousData)}
+Korrigierte Daten: ${JSON.stringify(correctedData)}
+Benutzer sagte: "${userMessage}"
+
+Extrahiere eine allgemeine Regel, die in Zukunft bei ALLEN Regieberichten angewendet werden soll.
+Die Regel soll verallgemeinert sein (nicht spezifisch fuer diesen einen Bericht).
+
+Gib NUR JSON zurueck, ohne Markdown:
+{"trigger":"<Wann gilt diese Regel - kurz>","rule":"<Die Regel als klare Anweisung>"}
+
+Wenn keine sinnvolle allgemeine Regel extrahiert werden kann (z.B. nur ein Tippfehler korrigiert wurde), gib zurueck:
+{"trigger":"","rule":""}`;
+
+  const raw = await ollama(prompt);
+  try {
+    const jsonText = raw.trim().replace(/^```json\s*|```\s*$/g, "").trim();
+    const parsed = JSON.parse(jsonText);
+    if (parsed.trigger && parsed.rule) {
+      return { trigger: parsed.trigger, rule: parsed.rule };
+    }
+    return null;
+  } catch (e) {
+    console.error("[EXTRACT-RULE] parse error:", e.message);
+    return null;
+  }
 }
 
 async function chatProjectAI({ userText, projectName, contextText }) {
@@ -134,4 +337,13 @@ ${(lines || []).map((l) => `- ${l}`).join("\n")}
   }
 }
 
-module.exports = { chatProjectAI, generateReport, generateEmailDraft, classifyReportLines };
+module.exports = {
+  chatProjectAI,
+  generateReport,
+  generateEmailDraft,
+  classifyReportLines,
+  chatReportAI,
+  extractRuleFromCorrection,
+  buildReportSystemPrompt,
+  detectIntent,
+};

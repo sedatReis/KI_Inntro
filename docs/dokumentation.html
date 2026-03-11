@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KI-Inntro Bot &ndash; Benutzerhandbuch</title>
+  <style>
+    :root {
+      --primary: #1a56db;
+      --primary-light: #3b82f6;
+      --primary-dark: #1e3a8a;
+      --bg: #f8fafc;
+      --bg-card: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+      --accent: #0ea5e9;
+      --accent-green: #10b981;
+      --accent-orange: #f59e0b;
+      --accent-red: #ef4444;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+      --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+      --shadow-lg: 0 10px 15px rgba(0,0,0,.1), 0 4px 6px rgba(0,0,0,.05);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== HEADER ===== */
+    .hero {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--primary-light) 100%);
+      color: #fff;
+      padding: 4rem 2rem 3rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+    .hero h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: .5rem;
+      position: relative;
+      z-index: 1;
+    }
+    .hero .subtitle {
+      font-size: 1.15rem;
+      opacity: .85;
+      font-weight: 400;
+      position: relative;
+      z-index: 1;
+    }
+    .hero .badge {
+      display: inline-block;
+      background: rgba(255,255,255,.18);
+      backdrop-filter: blur(4px);
+      padding: .3rem 1rem;
+      border-radius: 20px;
+      font-size: .85rem;
+      margin-top: 1rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ===== LAYOUT ===== */
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* ===== NAV / TOC ===== */
+    .toc {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 2rem 2.5rem;
+      margin: -2rem auto 3rem;
+      position: relative;
+      z-index: 10;
+      max-width: 960px;
+    }
+    .toc h2 {
+      font-size: 1.3rem;
+      color: var(--primary);
+      margin-bottom: 1rem;
+      padding-bottom: .5rem;
+      border-bottom: 2px solid var(--border);
+    }
+    .toc ol {
+      list-style: none;
+      counter-reset: toc-counter;
+      columns: 2;
+      column-gap: 2rem;
+    }
+    .toc ol li {
+      counter-increment: toc-counter;
+      break-inside: avoid;
+      margin-bottom: .4rem;
+    }
+    .toc ol li a {
+      text-decoration: none;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .35rem .5rem;
+      border-radius: var(--radius-sm);
+      transition: background .15s, color .15s;
+      font-size: .95rem;
+    }
+    .toc ol li a::before {
+      content: counter(toc-counter);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 50%;
+      font-size: .75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .toc ol li a:hover {
+      background: #eff6ff;
+      color: var(--primary);
+    }
+
+    /* ===== SECTIONS ===== */
+    section {
+      margin-bottom: 3rem;
+      scroll-margin-top: 2rem;
+    }
+    section > h2 {
+      font-size: 1.6rem;
+      color: var(--primary-dark);
+      margin-bottom: 1rem;
+      padding-bottom: .5rem;
+      border-bottom: 3px solid var(--primary);
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+    section > h2 .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 50%;
+      font-size: .85rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    h3 {
+      font-size: 1.15rem;
+      color: var(--primary);
+      margin: 1.5rem 0 .5rem;
+    }
+    h4 {
+      font-size: 1rem;
+      color: var(--text);
+      margin: 1rem 0 .4rem;
+      font-weight: 600;
+    }
+
+    p { margin-bottom: .8rem; }
+    ul, ol { margin-bottom: .8rem; padding-left: 1.5rem; }
+    li { margin-bottom: .3rem; }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.5rem 2rem;
+      margin-bottom: 1.5rem;
+      transition: box-shadow .2s;
+    }
+    .card:hover { box-shadow: var(--shadow-md); }
+    .card h3 { margin-top: 0; }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .card-grid .card { margin-bottom: 0; }
+
+    /* ===== INLINE CODE ===== */
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      font-size: .88em;
+      background: #f1f5f9;
+      color: #be185d;
+      padding: .15em .4em;
+      border-radius: 4px;
+    }
+
+    /* ===== TABLES ===== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1rem;
+      font-size: .92rem;
+    }
+    th, td {
+      padding: .6rem .8rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: #f1f5f9;
+      font-weight: 600;
+      color: var(--primary-dark);
+      white-space: nowrap;
+    }
+    tr:hover td { background: #f8fafc; }
+
+    /* ===== ALERTS ===== */
+    .alert {
+      padding: 1rem 1.2rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: 1rem;
+      font-size: .92rem;
+      border-left: 4px solid;
+    }
+    .alert-info { background: #eff6ff; border-color: var(--primary-light); color: #1e40af; }
+    .alert-warn { background: #fffbeb; border-color: var(--accent-orange); color: #92400e; }
+    .alert-success { background: #ecfdf5; border-color: var(--accent-green); color: #065f46; }
+    .alert-danger { background: #fef2f2; border-color: var(--accent-red); color: #991b1b; }
+
+    /* ===== TELEGRAM CHAT BUBBLES ===== */
+    .chat-window {
+      background: #e5ddd5;
+      background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8bfae' fill-opacity='0.12'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3Ccircle cx='90' cy='50' r='1.5'/%3E%3Ccircle cx='150' cy='20' r='2'/%3E%3Ccircle cx='60' cy='100' r='1'/%3E%3Ccircle cx='120' cy='80' r='1.5'/%3E%3Ccircle cx='40' cy='160' r='2'/%3E%3Ccircle cx='170' cy='140' r='1.5'/%3E%3Ccircle cx='100' cy='180' r='2'/%3E%3C/g%3E%3C/svg%3E");
+      border-radius: var(--radius);
+      padding: 1rem 1rem;
+      margin-bottom: 1rem;
+      max-width: 100%;
+      overflow: hidden;
+    }
+    .chat-header {
+      text-align: center;
+      margin-bottom: .8rem;
+    }
+    .chat-header span {
+      display: inline-block;
+      background: rgba(225,218,208,.85);
+      color: #54656f;
+      font-size: .75rem;
+      padding: .2rem .8rem;
+      border-radius: 8px;
+    }
+    .msg {
+      display: flex;
+      margin-bottom: .5rem;
+      align-items: flex-end;
+    }
+    .msg.user { justify-content: flex-end; }
+    .msg.bot { justify-content: flex-start; }
+    .bubble {
+      max-width: 75%;
+      padding: .55rem .8rem;
+      border-radius: 10px;
+      font-size: .9rem;
+      line-height: 1.45;
+      position: relative;
+      box-shadow: 0 1px 1px rgba(0,0,0,.1);
+      word-wrap: break-word;
+    }
+    .msg.user .bubble {
+      background: #dcf8c6;
+      color: #111;
+      border-bottom-right-radius: 3px;
+    }
+    .msg.bot .bubble {
+      background: #fff;
+      color: #111;
+      border-bottom-left-radius: 3px;
+    }
+    .bubble .sender {
+      display: block;
+      font-weight: 700;
+      font-size: .78rem;
+      margin-bottom: .15rem;
+    }
+    .msg.user .bubble .sender { color: #075e54; }
+    .msg.bot .bubble .sender { color: #6366f1; }
+    .bubble .time {
+      display: block;
+      text-align: right;
+      font-size: .68rem;
+      color: #8696a0;
+      margin-top: .2rem;
+    }
+    .bubble .bot-text { white-space: pre-line; }
+
+    /* ===== COMMAND BADGE ===== */
+    .cmd {
+      display: inline-block;
+      background: var(--primary);
+      color: #fff;
+      padding: .15rem .6rem;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: .85rem;
+      font-weight: 600;
+    }
+
+    /* ===== STEP LIST ===== */
+    .steps {
+      counter-reset: step-counter;
+      list-style: none;
+      padding-left: 0;
+    }
+    .steps li {
+      counter-increment: step-counter;
+      padding: .6rem 0 .6rem 3rem;
+      position: relative;
+      margin-bottom: .3rem;
+    }
+    .steps li::before {
+      content: counter(step-counter);
+      position: absolute;
+      left: 0;
+      top: .5rem;
+      width: 28px;
+      height: 28px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .8rem;
+      font-weight: 700;
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-light);
+      font-size: .85rem;
+      border-top: 1px solid var(--border);
+      margin-top: 2rem;
+    }
+
+    /* ===== BACK TO TOP ===== */
+    .back-top {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--primary);
+      color: #fff;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      box-shadow: var(--shadow-lg);
+      font-size: 1.3rem;
+      transition: transform .2s, opacity .2s;
+      z-index: 999;
+    }
+    .back-top:hover { transform: translateY(-3px); }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 700px) {
+      .hero { padding: 2.5rem 1rem 2rem; }
+      .hero h1 { font-size: 1.8rem; }
+      .toc ol { columns: 1; }
+      .toc { padding: 1.5rem; margin: -1.5rem 1rem 2rem; }
+      .container { padding: 0 1rem; }
+      .card { padding: 1rem 1.2rem; }
+      .bubble { max-width: 88%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<div class="hero">
+  <h1>KI-Inntro Bot</h1>
+  <p class="subtitle">Dein Telegram-Assistent f&uuml;r Regieberichte, Bautagesberichte und E-Mails</p>
+  <span class="badge">Benutzerhandbuch</span>
+</div>
+
+<!-- ===== TOC ===== -->
+<div class="container">
+<nav class="toc">
+  <h2>Inhaltsverzeichnis</h2>
+  <ol>
+    <li><a href="#willkommen">Willkommen</a></li>
+    <li><a href="#erste-schritte">Erste Schritte</a></li>
+    <li><a href="#projekte">Projekte verwalten</a></li>
+    <li><a href="#regiebericht">Regiebericht (RB) erstellen</a></li>
+    <li><a href="#bautagesbericht">Bautagesbericht (BTB) erstellen</a></li>
+    <li><a href="#korrekturen">Berichte korrigieren</a></li>
+    <li><a href="#email">E-Mail-Funktionen</a></li>
+    <li><a href="#ki-chat">Zusammenfassungen &amp; KI-Chat</a></li>
+    <li><a href="#befehle">Alle Befehle auf einen Blick</a></li>
+    <li><a href="#tipps">Tipps &amp; H&auml;ufige Fragen</a></li>
+  </ol>
+</nav>
+
+<!-- ===== 1. WILLKOMMEN ===== -->
+<section id="willkommen">
+  <h2><span class="num">1</span> Willkommen</h2>
+  <div class="card">
+    <p>
+      Willkommen beim <strong>KI-Inntro Bot</strong> &ndash; deinem intelligenten Telegram-Assistenten f&uuml;r die Baustelle.
+      Der Bot hilft dir, <strong>Regieberichte</strong> und <strong>Bautagesberichte</strong> schnell und einfach per Sprachnachricht oder Text zu erstellen,
+      als Excel-Datei zu exportieren und per E-Mail weiterzuleiten. Die integrierte KI versteht nat&uuml;rliche Sprache,
+      lernt aus deinen Korrekturen und wird mit der Zeit immer besser.
+    </p>
+  </div>
+
+  <div class="card-grid" style="margin-top:1rem">
+    <div class="card" style="border-left:4px solid var(--primary)">
+      <h4>Berichte diktieren</h4>
+      <p>Erz&auml;hle einfach, was auf der Baustelle passiert ist. Die KI erkennt automatisch Leistungen, Arbeitskr&auml;fte und Material und erstellt daraus einen fertigen Bericht.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--accent-green)">
+      <h4>Excel-Export</h4>
+      <p>Dein Bericht wird automatisch in eine vordefinierte Excel-Vorlage eingef&uuml;llt. Vorschau und Korrektur inklusive &ndash; erst nach deiner Freigabe wird gespeichert.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--accent-orange)">
+      <h4>E-Mail-Versand</h4>
+      <p>Nach der Freigabe wird automatisch ein E-Mail-Entwurf mit dem Bericht als Anhang erstellt. Zus&auml;tzlich kannst du im privaten Chat E-Mails verfassen und versenden.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--accent-red)">
+      <h4>Lernf&auml;hige KI</h4>
+      <p>Der Bot merkt sich deine Korrekturen und wendet gelernte Regeln bei zuk&uuml;nftigen Berichten automatisch an. Je &ouml;fter du ihn nutzt, desto besser wird er.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 2. ERSTE SCHRITTE ===== -->
+<section id="erste-schritte">
+  <h2><span class="num">2</span> Erste Schritte</h2>
+
+  <div class="card">
+    <h3>Bot finden und starten</h3>
+    <p>Suche in Telegram nach dem Bot-Namen oder &ouml;ffne den Link, den du von deinem Administrator erhalten hast. Dr&uuml;cke <strong>/start</strong>, um die Hilfe&uuml;bersicht zu sehen.</p>
+
+    <h3>Gruppe einrichten</h3>
+    <p>Berichte werden in <strong>Telegram-Gruppen</strong> erstellt. So richtest du eine Gruppe ein:</p>
+    <ol class="steps">
+      <li>Erstelle eine neue Telegram-Gruppe f&uuml;r dein Bauprojekt (z.B. &bdquo;Baustelle Nord&ldquo;).</li>
+      <li>F&uuml;ge den <strong>KI-Inntro Bot</strong> als Mitglied der Gruppe hinzu.</li>
+      <li>Verkn&uuml;pfe die Gruppe mit einem Projekt: Schreibe <code>/verknuepfen PROJEKT-KUERZEL</code> in die Gruppe (z.B. <code>/verknuepfen SB-NORD-01</code>).</li>
+      <li>Ab jetzt kannst du in dieser Gruppe Berichte erstellen, indem du einfach <code>RB</code> oder <code>BTB</code> schreibst.</li>
+    </ol>
+  </div>
+
+  <div class="alert alert-info">
+    <strong>Tipp:</strong> Im privaten Chat mit dem Bot kannst du Projekte anlegen, E-Mails schreiben und mit der KI &uuml;ber deine Projekte chatten. Berichte werden immer in Gruppen erstellt.
+  </div>
+
+  <div class="chat-window">
+    <div class="chat-header"><span>Privater Chat</span></div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        /start
+        <span class="time">08:00</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">Hallo! Ich bin der KI-Inntro Bot.
+
+Ich helfe dir bei Regieberichten, Bautagesberichten und E-Mails.
+
+Befehle:
+/newproject - Neues Projekt anlegen
+/project - Aktives Projekt setzen
+/summary - Zusammenfassung
+/ask - KI-Frage stellen
+...und vieles mehr!
+
+Erstelle eine Gruppe, f&uuml;ge mich hinzu und verkn&uuml;pfe sie mit /verknuepfen.</span>
+        <span class="time">08:00</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 3. PROJEKTE VERWALTEN ===== -->
+<section id="projekte">
+  <h2><span class="num">3</span> Projekte verwalten</h2>
+
+  <h3>Neues Projekt anlegen</h3>
+  <div class="card">
+    <p>Es gibt zwei Wege, ein neues Projekt anzulegen:</p>
+    <p><strong>Variante 1: Per Befehl</strong></p>
+    <p>Nutze <code>/newproject</code> mit allen Angaben auf einmal:</p>
+    <p><code>/newproject K&uuml;rzel | Projektname | Ansprechperson | E-Mail | CC-E-Mail | Auftraggeber</code></p>
+
+    <p><strong>Variante 2: Per Gespr&auml;ch</strong></p>
+    <p>Schreibe dem Bot im privaten Chat einfach, dass du ein neues Projekt anlegen m&ouml;chtest. Die KI fragt alle Felder nacheinander ab.</p>
+  </div>
+
+  <div class="chat-window">
+    <div class="chat-header"><span>Privater Chat</span></div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        Ich m&ouml;chte ein neues Projekt anlegen
+        <span class="time">09:15</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        Neues Projekt! Wie lautet das K&uuml;rzel (z.B. SB-NORD-01)?
+        <span class="time">09:15</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        SB-WEST-02
+        <span class="time">09:15</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        K&uuml;rzel: SB-WEST-02. Wie hei&szlig;t das Projekt?
+        <span class="time">09:15</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        Wohnanlage West
+        <span class="time">09:16</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        Ansprechperson (Name)?
+        <span class="time">09:16</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        Anna Huber
+        <span class="time">09:16</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        E-Mail der Ansprechperson?
+        <span class="time">09:16</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        anna.huber@baufirma.at
+        <span class="time">09:16</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        CC E-Mail? (oder 'nein' zum &Uuml;berspringen)
+        <span class="time">09:16</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        nein
+        <span class="time">09:17</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        Auftraggeber?
+        <span class="time">09:17</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        Gemeinde Inntal
+        <span class="time">09:17</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">Projekt erstellt: SB-WEST-02 - Wohnanlage West
+
+Erstelle eine Telegram-Gruppe, f&uuml;ge mich hinzu, und verkn&uuml;pfe mit:
+/verknuepfen SB-WEST-02</span>
+        <span class="time">09:17</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>Gruppe mit Projekt verkn&uuml;pfen</h3>
+  <div class="card">
+    <p>Schreibe in der Telegram-Gruppe den Befehl <code>/verknuepfen</code> gefolgt vom Projekt-K&uuml;rzel. Danach kannst du Berichte in dieser Gruppe starten, ohne jedes Mal das Projekt anzugeben.</p>
+  </div>
+  <div class="chat-window">
+    <div class="chat-header"><span>Gruppe: Baustelle West</span></div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        /verknuepfen SB-WEST-02
+        <span class="time">09:20</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">Gruppe verkn&uuml;pft mit Projekt: SB-WEST-02 (Wohnanlage West).
+Ab jetzt kannst du hier einfach RB oder BTB schreiben, um einen Bericht zu starten.</span>
+        <span class="time">09:20</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>Projekte anzeigen und l&ouml;schen</h3>
+  <div class="card">
+    <p>Um alle bestehenden Projekte zu sehen, schreibe <code>/projects</code>. Der Bot zeigt dir eine Liste mit K&uuml;rzel, Name und Ansprechperson.</p>
+    <p>Zum L&ouml;schen eines Projekts nutze <code>/deleteproject KUERZEL</code>. Der Bot fragt dich zur Sicherheit nochmals, bevor das Projekt entfernt wird.</p>
+  </div>
+</section>
+
+<!-- ===== 4. REGIEBERICHT ===== -->
+<section id="regiebericht">
+  <h2><span class="num">4</span> Regiebericht (RB) erstellen</h2>
+
+  <div class="card">
+    <p>Regieberichte werden in <strong>Telegram-Gruppen</strong> erstellt. Der Ablauf ist einfach:</p>
+    <ol class="steps">
+      <li><strong>Starten:</strong> Schreibe <code>RB</code> in die verkn&uuml;pfte Gruppe (oder <code>RB SB-NORD-01</code> wenn nicht verkn&uuml;pft).</li>
+      <li><strong>Diktieren:</strong> Erz&auml;hle in eigenen Worten, was auf der Baustelle passiert ist. Die KI erkennt und sortiert automatisch Leistungen, Arbeitskr&auml;fte und Material.</li>
+      <li><strong>Fotos senden:</strong> Schicke Fotos direkt in den Chat &ndash; sie werden dem Bericht zugeordnet.</li>
+      <li><strong>Korrigieren:</strong> Beschreibe &Auml;nderungen in nat&uuml;rlicher Sprache.</li>
+      <li><strong>Vorschau:</strong> Schreibe <code>Ende</code> &ndash; der Bot erstellt eine Excel-Vorschau zur Kontrolle.</li>
+      <li><strong>Freigeben:</strong> Schreibe <code>freigeben</code> &ndash; der Bericht wird gespeichert und ein E-Mail-Entwurf erstellt.</li>
+    </ol>
+    <p style="margin-top:.8rem"><strong>Was du diktieren kannst:</strong></p>
+    <ul>
+      <li><strong>Leistungen:</strong> Welche Arbeiten ausgef&uuml;hrt wurden (z.B. &bdquo;Heizungsrohre im 2. OG verlegt&ldquo;)</li>
+      <li><strong>Arbeitskr&auml;fte:</strong> Wer vor Ort war und wie viele Stunden (z.B. &bdquo;2 Monteure je 8 Stunden&ldquo;)</li>
+      <li><strong>Material:</strong> Verbrauchtes Material mit Menge und Einheit (z.B. &bdquo;25m Kupferrohr, 10 Stk Pressfittings&ldquo;)</li>
+    </ul>
+    <p>Du kannst alles in einer Nachricht schreiben oder mehrere Nachrichten nacheinander senden.</p>
+  </div>
+
+  <div class="alert alert-success">
+    <strong>Gut zu wissen:</strong> <code>Ende</code> erstellt nur eine Vorschau. Du kannst danach noch Korrekturen machen und erneut <code>Ende</code> schreiben. Erst <code>freigeben</code> speichert den Bericht endg&uuml;ltig.
+  </div>
+
+  <h3>Vollst&auml;ndiges Beispiel: RB von Start bis Freigabe</h3>
+  <div class="chat-window">
+    <div class="chat-header"><span>Gruppe: Baustelle Nord</span></div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        RB
+        <span class="time">16:30</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">RB-Bericht gestartet f&uuml;r SB-NORD-01.
+Erz&auml;hl mir was heute auf der Baustelle gemacht wurde.
+Du kannst Fotos senden, Korrekturen machen, und mit 'Ende' eine Vorschau erstellen.
+'freigeben' zum endg&uuml;ltigen Speichern | 'abbrechen' zum Verwerfen.</span>
+        <span class="time">16:30</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        Heute haben wir die Heizungsrohre im 2. OG verlegt und die Wandschlitze in der K&uuml;che gefr&auml;st. 2 Monteure und 1 Helfer waren vor Ort, jeweils 8 Stunden. Material: 25m Kupferrohr und 10 Stk Pressfittings
+        <span class="time">16:31</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">Verstanden! Hier der aktuelle Stand:
+
+Leistungen:
+- Heizungsrohre im 2. OG verlegt
+- Wandschlitze in der K&uuml;che gefr&auml;st
+
+Arbeitskr&auml;fte:
+- 2 Monteure je 8h
+- 1 Helfer 8h
+
+Material:
+- 25m Kupferrohr
+- 10 Stk Pressfittings
+
+Fehlt noch etwas? Schreibe 'Ende' f&uuml;r die Vorschau.</span>
+        <span class="time">16:31</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        <span style="color:#64748b;font-style:italic">[Foto: Heizungsrohre_2OG.jpg]</span>
+        <span class="time">16:32</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        Foto erhalten (1 Foto bisher).
+        <span class="time">16:32</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        Ende
+        <span class="time">16:33</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">Vorschau wird erstellt...
+
+[Excel-Datei: preview_RB1_....xlsx]
+
+Vorschau gesendet. Pr&uuml;fe den Bericht.
+- Beschreibe Korrekturen wenn etwas nicht stimmt
+- 'freigeben' zum endg&uuml;ltigen Speichern
+- 'Ende' f&uuml;r eine neue Vorschau nach Korrekturen
+- 'abbrechen' zum Verwerfen</span>
+        <span class="time">16:33</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        freigeben
+        <span class="time">16:34</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">Bericht wird gespeichert...
+
+[Excel-Datei: RB1.xlsx]
+
+Bericht gespeichert: Bauvorhaben/SB-NORD-01/Regieberichte/RB1
+Fotos gespeichert in RB1/Fotos/
+E-Mail-Entwurf gespeichert.</span>
+        <span class="time">16:34</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-warn">
+    <strong>Abbrechen:</strong> Schreibe jederzeit <code>abbrechen</code>, um die aktuelle Berichtssession zu verwerfen. Alle Eingaben gehen dabei verloren.
+  </div>
+</section>
+
+<!-- ===== 5. BAUTAGESBERICHT ===== -->
+<section id="bautagesbericht">
+  <h2><span class="num">5</span> Bautagesbericht (BTB) erstellen</h2>
+
+  <div class="card">
+    <p>Der Bautagesbericht funktioniert genauso wie der Regiebericht. Starte ihn mit <code>BTB</code> (oder <code>BTB SB-NORD-01</code> ohne Verkn&uuml;pfung).</p>
+    <p><strong>Unterschiede zum Regiebericht:</strong></p>
+    <ul>
+      <li>Arbeitskr&auml;fte werden in ein <strong>Rollen-Raster</strong> eingetragen (z.B. Polier, Monteur, Helfer)</li>
+      <li>Das Excel-Layout ist anders aufgebaut (BTB-Vorlage statt RB-Vorlage)</li>
+    </ul>
+
+    <p style="margin-top:1rem"><strong>Unterst&uuml;tzte Rollen im BTB:</strong></p>
+    <div style="columns:3;font-size:.9rem;margin-top:.3rem">
+      <ul style="padding-left:1.2rem">
+        <li>Projektleiter</li>
+        <li>Bauleiter</li>
+        <li>Polier</li>
+        <li>gehob. Bau-FA</li>
+        <li>Spezialbau-FA</li>
+        <li>Werkpolier</li>
+        <li>Bauvorarbeiter</li>
+        <li>Bau-FA</li>
+        <li>Baufachwerker</li>
+        <li>Bauwerker</li>
+        <li>Maschinist</li>
+        <li>Kranfahrer</li>
+        <li>Fremdfirmen</li>
+        <li>Monteur</li>
+        <li>Installateur</li>
+        <li>Helfer</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Beispiel: Bautagesbericht erstellen</h3>
+  <div class="chat-window">
+    <div class="chat-header"><span>Gruppe: Baustelle Nord</span></div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        BTB
+        <span class="time">17:00</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">BTB-Bericht gestartet f&uuml;r SB-NORD-01.
+Erz&auml;hl mir was heute auf der Baustelle gemacht wurde.</span>
+        <span class="time">17:00</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        Estrich im EG gegossen, Bewehrung im 1. OG verlegt. 1 Polier 9h, 3 Bau-FA je 8h, 1 Kranfahrer 4h. Material: 5m3 Beton, 200kg Bewehrungsstahl
+        <span class="time">17:01</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">Verstanden! Hier der aktuelle Stand:
+
+Leistungen:
+- Estrich im EG gegossen
+- Bewehrung im 1. OG verlegt
+
+Arbeitskr&auml;fte:
+- 1 Polier 9h
+- 3 Bau-FA je 8h
+- 1 Kranfahrer 4h
+
+Material:
+- 5 m3 Beton
+- 200 kg Bewehrungsstahl
+
+Schreibe 'Ende' f&uuml;r die Vorschau.</span>
+        <span class="time">17:01</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        Ende
+        <span class="time">17:02</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">Vorschau wird erstellt...
+
+[Excel-Datei: preview_BTB1_....xlsx]
+
+Vorschau gesendet. 'freigeben' zum Speichern oder Korrekturen beschreiben.</span>
+        <span class="time">17:02</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        freigeben
+        <span class="time">17:03</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">Bericht gespeichert: Bauvorhaben/SB-NORD-01/Bautageberichte/BTB1
+E-Mail-Entwurf gespeichert.</span>
+        <span class="time">17:03</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 6. KORREKTUREN ===== -->
+<section id="korrekturen">
+  <h2><span class="num">6</span> Berichte korrigieren</h2>
+
+  <div class="card">
+    <p>Solange ein Bericht noch nicht freigegeben ist, kannst du jederzeit Korrekturen vornehmen. Beschreibe die &Auml;nderung einfach in nat&uuml;rlicher Sprache &ndash; die KI versteht, was ge&auml;ndert werden soll.</p>
+    <p><strong>M&ouml;gliche Korrekturen:</strong></p>
+    <ul>
+      <li><strong>Leistung &auml;ndern:</strong> &bdquo;Streich die Rohrmontage und schreib stattdessen Leitungsverlegung&ldquo;</li>
+      <li><strong>Leistung hinzuf&uuml;gen:</strong> &bdquo;Wir haben auch noch die Fensterdichtungen erneuert&ldquo;</li>
+      <li><strong>Arbeitskr&auml;fte anpassen:</strong> &bdquo;Es waren 4 Monteure, nicht 2&ldquo;</li>
+      <li><strong>Material erg&auml;nzen:</strong> &bdquo;Wir haben auch 50m Kabel verwendet&ldquo;</li>
+      <li><strong>Material entfernen:</strong> &bdquo;Die D&uuml;bel brauchen wir nicht, streich die bitte&ldquo;</li>
+    </ul>
+    <p>Nach jeder Korrektur zeigt dir der Bot den aktualisierten Stand. Schreibe <code>Ende</code> f&uuml;r eine neue Vorschau.</p>
+  </div>
+
+  <div class="alert alert-info">
+    <strong>Der Bot lernt mit:</strong> Aus deinen Korrekturen werden Regeln gelernt. Wenn du z.B. immer &bdquo;Monteur&ldquo; statt &bdquo;Installateur&ldquo; verwendest, merkt sich der Bot das f&uuml;r zuk&uuml;nftige Berichte.
+  </div>
+
+  <h3>Beispiel: Korrektur w&auml;hrend einer Session</h3>
+  <div class="chat-window">
+    <div class="chat-header"><span>Gruppe: Baustelle Nord</span></div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        Es waren eigentlich 4 Monteure, nicht 2. Und wir haben auch 5kg D&uuml;bel verwendet.
+        <span class="time">16:35</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">Korrektur &uuml;bernommen! Aktueller Stand:
+
+Leistungen:
+- Heizungsrohre im 2. OG verlegt
+- Wandschlitze in der K&uuml;che gefr&auml;st
+
+Arbeitskr&auml;fte:
+- 4 Monteure je 8h
+- 1 Helfer 8h
+
+Material:
+- 25m Kupferrohr
+- 10 Stk Pressfittings
+- 5 kg D&uuml;bel
+
+Schreibe 'Ende' f&uuml;r eine neue Vorschau.</span>
+        <span class="time">16:35</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>Beispiel: Leistung &auml;ndern</h3>
+  <div class="chat-window">
+    <div class="chat-header"><span>Gruppe: Baustelle Nord</span></div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        Streich die Wandschlitze und schreib stattdessen Kabelkan&auml;le gefr&auml;st
+        <span class="time">16:37</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">Korrektur &uuml;bernommen! Aktueller Stand:
+
+Leistungen:
+- Heizungsrohre im 2. OG verlegt
+- Kabelkan&auml;le gefr&auml;st
+
+Schreibe 'Ende' f&uuml;r eine neue Vorschau.</span>
+        <span class="time">16:37</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 7. E-MAIL ===== -->
+<section id="email">
+  <h2><span class="num">7</span> E-Mail-Funktionen</h2>
+
+  <h3>Automatischer E-Mail-Entwurf nach Freigabe</h3>
+  <div class="card">
+    <p>Wenn du einen Bericht mit <code>freigeben</code> abschlie&szlig;t und f&uuml;r das Projekt eine Kontakt-E-Mail hinterlegt ist, wird automatisch ein E-Mail-Entwurf erstellt:</p>
+    <ul>
+      <li>Der Entwurf erscheint in deinem E-Mail-Postfach im Entwurf-Ordner</li>
+      <li>Der Bericht (Excel-Datei) ist als Anhang beigef&uuml;gt</li>
+      <li>Du musst die E-Mail nur noch pr&uuml;fen und abschicken</li>
+    </ul>
+  </div>
+
+  <h3>E-Mail im privaten Chat schreiben</h3>
+  <div class="card">
+    <p>Im privaten Chat kannst du dem Bot eine E-Mail diktieren. Der Bot erstellt einen Entwurf, den du vor dem Senden pr&uuml;fen kannst.</p>
+    <ol>
+      <li>Beschreibe, an wen die Mail gehen soll und was der Inhalt sein soll</li>
+      <li>Der Bot erstellt einen Entwurf mit Betreff und Text</li>
+      <li>Best&auml;tige mit <code>go</code> oder <code>senden</code></li>
+      <li>Oder verwirf mit <code>abbrechen</code></li>
+    </ol>
+  </div>
+
+  <h3>Beispiel: E-Mail versenden</h3>
+  <div class="chat-window">
+    <div class="chat-header"><span>Privater Chat</span></div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        Schicke eine Mail an anna.huber@baufirma.at &uuml;ber den aktuellen Baufortschritt und informiere &uuml;ber die Verz&ouml;gerung bei der Lieferung
+        <span class="time">10:00</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">Entwurf:
+An: anna.huber@baufirma.at
+Betreff: Baufortschritt &amp; Lieferverz&ouml;gerung
+
+Sehr geehrte Frau Huber,
+
+hiermit informiere ich Sie &uuml;ber den aktuellen Stand der Arbeiten auf der Baustelle.
+
+Baufortschritt:
+- Rohrmontage im 2. OG abgeschlossen
+- Wandschlitze in der K&uuml;che gefr&auml;st
+
+Leider ist es zu einer Verz&ouml;gerung bei der Materiallieferung gekommen. Wir erwarten die Lieferung voraussichtlich Ende der Woche.
+
+Mit freundlichen Gr&uuml;&szlig;en
+
+Antworte mit 'go' zum Senden oder 'abbrechen' zum Verwerfen.</span>
+        <span class="time">10:01</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        go
+        <span class="time">10:01</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        E-Mail gesendet.
+        <span class="time">10:02</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info">
+    <strong>Tipp:</strong> Die KI nutzt den Kontext aus deinen Gruppenchats, um relevante Informationen f&uuml;r die E-Mail zusammenzustellen. Setze vorher mit <code>/project</code> das aktive Projekt, um bessere Ergebnisse zu erhalten.
+  </div>
+</section>
+
+<!-- ===== 8. KI-CHAT ===== -->
+<section id="ki-chat">
+  <h2><span class="num">8</span> Zusammenfassungen &amp; KI-Chat</h2>
+
+  <div class="card">
+    <p>Der Bot kann Gruppenchats zusammenfassen und deine Fragen zu Baustellen beantworten &ndash; basierend auf den Nachrichten in deinen Gruppen.</p>
+  </div>
+
+  <h3>Zusammenfassungen</h3>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Befehl</th><th>Was er tut</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="cmd">/summary</span> [Stunden]</td><td>Zusammenfassung aller Gruppen (Standard: letzte 24 Stunden)</td></tr>
+        <tr><td><span class="cmd">/summarygroup</span> [Stunden]</td><td>Zusammenfassung nur der aktuellen Gruppe</td></tr>
+        <tr><td><span class="cmd">/report</span></td><td>Strukturierter Baustellenbericht der letzten 24 Stunden der aktuellen Gruppe</td></tr>
+      </tbody>
+    </table>
+    <p>Du kannst die Stunden anpassen, z.B. <code>/summary 48</code> f&uuml;r die letzten 2 Tage.</p>
+  </div>
+
+  <h3>KI-Fragen stellen</h3>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Befehl</th><th>Was er tut</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="cmd">/ask</span> Frage</td><td>Einmalige KI-Frage mit Gruppenkontext (in einer Gruppe verwenden)</td></tr>
+        <tr><td><span class="cmd">/context</span> Stunden</td><td>Setzt den Zeitraum, den die KI als Kontext ber&uuml;cksichtigt</td></tr>
+        <tr><td><span class="cmd">/project</span> Name</td><td>Setzt das aktive Projekt f&uuml;r den privaten KI-Chat</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Privater KI-Chat</h3>
+  <div class="card">
+    <p>Im privaten Chat kannst du frei mit dem Bot &uuml;ber deine Projekte chatten. Setze zuerst mit <code>/project Projektname</code> das aktive Projekt. Danach beantwortet die KI deine Fragen basierend auf den Gruppennachrichten dieses Projekts.</p>
+  </div>
+
+  <div class="chat-window">
+    <div class="chat-header"><span>Privater Chat</span></div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        /project Sanierung Nord
+        <span class="time">08:30</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        Aktives Projekt: SB-NORD-01 (Sanierung Nord)
+        <span class="time">08:30</span>
+      </div>
+    </div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        Was wurde gestern auf der Baustelle gemacht?
+        <span class="time">08:31</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">Gestern wurden folgende Arbeiten durchgef&uuml;hrt:
+
+- Heizungsrohre im 2. OG verlegt
+- Wandschlitze in der K&uuml;che gefr&auml;st
+- D&auml;mmung der Au&szlig;enwand angebracht
+
+Vor Ort waren 2 Monteure und 1 Helfer (je 8h). Es wurden 25m Kupferrohr und 10 Pressfittings verbaut.</span>
+        <span class="time">08:31</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>Beispiel: /ask in einer Gruppe</h3>
+  <div class="chat-window">
+    <div class="chat-header"><span>Gruppe: Baustelle Nord</span></div>
+    <div class="msg user">
+      <div class="bubble">
+        <span class="sender">Du</span>
+        /ask Wie viele Monteure waren diese Woche auf der Baustelle?
+        <span class="time">15:00</span>
+      </div>
+    </div>
+    <div class="msg bot">
+      <div class="bubble">
+        <span class="sender">KI-Inntro Bot</span>
+        <span class="bot-text">Basierend auf den Nachrichten der letzten 24 Stunden waren insgesamt 4 Monteure auf der Baustelle. Am Montag 2 Monteure, am Dienstag 2 Monteure.</span>
+        <span class="time">15:01</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 9. ALLE BEFEHLE ===== -->
+<section id="befehle">
+  <h2><span class="num">9</span> Alle Befehle auf einen Blick</h2>
+
+  <h3>Allgemein</h3>
+  <table>
+    <thead>
+      <tr><th>Befehl</th><th>Wo</th><th>Beschreibung</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="cmd">/start</span></td><td>Privat / Gruppe</td><td>Zeigt die Hilfe&uuml;bersicht mit allen Befehlen</td></tr>
+      <tr><td><span class="cmd">/who</span></td><td>Privat / Gruppe</td><td>Zeigt deine Telegram User-ID</td></tr>
+      <tr><td><span class="cmd">/chatid</span></td><td>Gruppe</td><td>Zeigt die ID der aktuellen Gruppe</td></tr>
+      <tr><td><span class="cmd">/allowthis</span></td><td>Gruppe</td><td>Pr&uuml;ft ob die Gruppe berechtigt/verkn&uuml;pft ist</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Projekte</h3>
+  <table>
+    <thead>
+      <tr><th>Befehl</th><th>Wo</th><th>Beschreibung</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="cmd">/newproject</span></td><td>Privat</td><td>Neues Bauprojekt anlegen</td></tr>
+      <tr><td><span class="cmd">/projects</span></td><td>Privat</td><td>Alle Projekte anzeigen</td></tr>
+      <tr><td><span class="cmd">/deleteproject</span></td><td>Privat</td><td>Ein Projekt l&ouml;schen</td></tr>
+      <tr><td><span class="cmd">/verknuepfen</span></td><td>Gruppe</td><td>Gruppe mit einem Projekt verkn&uuml;pfen</td></tr>
+      <tr><td><span class="cmd">/project</span></td><td>Privat</td><td>Aktives Projekt f&uuml;r den KI-Chat setzen</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Berichte</h3>
+  <table>
+    <thead>
+      <tr><th>Eingabe</th><th>Wo</th><th>Beschreibung</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="cmd">RB</span> oder <span class="cmd">RB K&uuml;rzel</span></td><td>Gruppe</td><td>Regiebericht starten</td></tr>
+      <tr><td><span class="cmd">BTB</span> oder <span class="cmd">BTB K&uuml;rzel</span></td><td>Gruppe</td><td>Bautagesbericht starten</td></tr>
+      <tr><td><code>Ende</code></td><td>Gruppe</td><td>Excel-Vorschau erstellen</td></tr>
+      <tr><td><code>freigeben</code></td><td>Gruppe</td><td>Bericht endg&uuml;ltig speichern und E-Mail-Entwurf erstellen</td></tr>
+      <tr><td><code>abbrechen</code></td><td>Gruppe</td><td>Aktuelle Berichtssession verwerfen</td></tr>
+    </tbody>
+  </table>
+
+  <h3>E-Mail</h3>
+  <table>
+    <thead>
+      <tr><th>Aktion</th><th>Wo</th><th>Beschreibung</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Freitext (E-Mail diktieren)</td><td>Privat</td><td>E-Mail verfassen und senden lassen</td></tr>
+      <tr><td><code>go</code> / <code>senden</code></td><td>Privat</td><td>E-Mail-Entwurf abschicken</td></tr>
+      <tr><td><code>abbrechen</code></td><td>Privat</td><td>E-Mail-Entwurf verwerfen</td></tr>
+    </tbody>
+  </table>
+
+  <h3>KI / Chat</h3>
+  <table>
+    <thead>
+      <tr><th>Befehl</th><th>Wo</th><th>Beschreibung</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="cmd">/summary</span> [h]</td><td>Privat</td><td>Zusammenfassung aller Gruppen</td></tr>
+      <tr><td><span class="cmd">/summarygroup</span> [h]</td><td>Gruppe</td><td>Zusammenfassung der aktuellen Gruppe</td></tr>
+      <tr><td><span class="cmd">/report</span></td><td>Gruppe</td><td>Strukturierter Baustellenbericht (24h)</td></tr>
+      <tr><td><span class="cmd">/ask</span> Frage</td><td>Gruppe</td><td>Einmalige KI-Frage mit Gruppenkontext</td></tr>
+      <tr><td><span class="cmd">/context</span> Stunden</td><td>Gruppe</td><td>Kontext-Zeitraum f&uuml;r KI-Fragen setzen</td></tr>
+      <tr><td><span class="cmd">/project</span> Name</td><td>Privat</td><td>Aktives Projekt f&uuml;r KI-Chat setzen</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ===== 10. TIPPS & FAQ ===== -->
+<section id="tipps">
+  <h2><span class="num">10</span> Tipps &amp; H&auml;ufige Fragen</h2>
+
+  <h3>Praktische Tipps</h3>
+  <div class="card-grid">
+    <div class="card" style="border-left:4px solid var(--accent-green)">
+      <h4>Gruppe verkn&uuml;pfen spart Zeit</h4>
+      <p>Verkn&uuml;pfe jede Projektgruppe mit <code>/verknuepfen</code>. Dann reicht ein einfaches <code>RB</code> oder <code>BTB</code> statt jedes Mal das K&uuml;rzel einzugeben.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--accent-green)">
+      <h4>Fotos w&auml;hrend der Session senden</h4>
+      <p>Schicke Fotos einfach w&auml;hrend der Bericht-Session in den Chat. Der Bot ordnet sie automatisch dem aktuellen Bericht zu und speichert sie beim Freigeben.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--accent-green)">
+      <h4>&bdquo;Ende&ldquo; f&uuml;r Vorschau nutzen</h4>
+      <p>Nutze <code>Ende</code> regelm&auml;&szlig;ig, um den aktuellen Stand als Excel-Datei zu pr&uuml;fen. Du kannst danach jederzeit weitere Korrekturen vornehmen.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--accent-green)">
+      <h4>Alles auf einmal oder St&uuml;ck f&uuml;r St&uuml;ck</h4>
+      <p>Du kannst Leistungen, Arbeitskr&auml;fte und Material in einer Nachricht diktieren oder &uuml;ber mehrere Nachrichten verteilen &ndash; der Bot sammelt alles.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--accent-green)">
+      <h4>KI-Chat f&uuml;r &Uuml;bersicht</h4>
+      <p>Nutze <code>/summary</code> am Morgen, um einen schnellen &Uuml;berblick &uuml;ber alle Baustellen zu bekommen. Mit <code>/ask</code> kannst du gezielte Fragen stellen.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--accent-green)">
+      <h4>Projekt setzen f&uuml;r den privaten Chat</h4>
+      <p>Setze mit <code>/project Projektname</code> das aktive Projekt, bevor du im privaten Chat Fragen stellst oder E-Mails schreibst. So hat die KI den richtigen Kontext.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:2rem">H&auml;ufige Fragen (FAQ)</h3>
+
+  <div class="card">
+    <h4>Der Bot antwortet nicht in der Gruppe &ndash; was tun?</h4>
+    <p>Stelle sicher, dass:</p>
+    <ul>
+      <li>Der Bot als Mitglied in der Gruppe ist</li>
+      <li>Die Gruppe berechtigt ist (pr&uuml;fe mit <code>/allowthis</code>)</li>
+      <li>Der Bot Nachrichten lesen darf (Privatsph&auml;re-Modus muss deaktiviert sein &ndash; wende dich an deinen Administrator)</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h4>Wie &auml;ndere ich die Kontaktdaten eines Projekts?</h4>
+    <p>Aktuell m&uuml;ssen Kontaktdaten direkt in der Projektliste ge&auml;ndert werden. Wende dich dazu an deinen Administrator oder lege das Projekt mit <code>/newproject</code> neu an.</p>
+  </div>
+
+  <div class="card">
+    <h4>Kann ich einen bereits freigegebenen Bericht &auml;ndern?</h4>
+    <p>Nein, nach der Freigabe ist der Bericht gespeichert. &Auml;nderungen sind nur m&ouml;glich, solange die Session noch l&auml;uft (vor dem <code>freigeben</code>). Nutze <code>Ende</code> f&uuml;r eine Vorschau, bevor du freigibst.</p>
+  </div>
+
+  <div class="card">
+    <h4>Was passiert wenn ich &bdquo;abbrechen&ldquo; schreibe?</h4>
+    <p>Die gesamte aktuelle Session (Bericht oder E-Mail) wird verworfen. Alle bisherigen Eingaben gehen verloren. Du kannst danach einen neuen Bericht starten.</p>
+  </div>
+
+  <div class="card">
+    <h4>Wie viele Fotos kann ich pro Bericht senden?</h4>
+    <p>Es gibt keine feste Begrenzung. Sende so viele Fotos, wie du brauchst &ndash; sie werden beim Freigeben im Foto-Ordner des Berichts gespeichert.</p>
+  </div>
+
+  <div class="card">
+    <h4>K&ouml;nnen mehrere Personen gleichzeitig Berichte erstellen?</h4>
+    <p>Pro Gruppe kann immer nur eine Berichtssession gleichzeitig aktiv sein. Warte, bis der aktuelle Bericht freigegeben oder abgebrochen wurde, bevor du einen neuen startest.</p>
+  </div>
+
+  <div class="card">
+    <h4>Woher wei&szlig; der Bot, welche Berichtsnummer als n&auml;chstes kommt?</h4>
+    <p>Der Bot z&auml;hlt automatisch hoch. Wenn der letzte Regiebericht RB3 war, wird der n&auml;chste automatisch RB4.</p>
+  </div>
+</section>
+
+</div><!-- /container -->
+
+<footer>
+  KI-Inntro Bot &ndash; Benutzerhandbuch
+</footer>
+
+<a href="#" class="back-top" title="Nach oben">&uarr;</a>
+
+</body>
+</html>

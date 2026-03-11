@@ -1,0 +1,54 @@
+{
+  "rules": [
+    {
+      "id": "r_1772883201534",
+      "created": "2026-03-07T11:33:21.534Z",
+      "trigger": "Beim Überprüfen von Material- und Arbeitskraftlisten",
+      "rule": "Prüfen Sie, ob die Informationen korrekt in den jeweiligen Listen (Material oder Arbeitskräfte) eingetragen wurden. Korrigieren Sie gegebenenfalls die Einträge, um sicherzustellen, dass sie an der richtigen Stelle stehen.",
+      "source": {
+        "userMessage": "nicht dort in die Liste sondern bei den Mitarbeiter Liste eintragen",
+        "projectCode": "SB-NORD-01"
+      }
+    },
+    {
+      "id": "r_1772883427908",
+      "created": "2026-03-07T11:37:07.908Z",
+      "trigger": "Beim Aufschreiben von Leistungen",
+      "rule": "Trenne jede einzelne Arbeit oder Aufgabe klar und deutlich durch Kommas, um Unklarheiten zu vermeiden. Beispiel: 'Unterputze anbringen, Arbeit mit Silikon'",
+      "source": {
+        "userMessage": "Silikon arbeit und Unterputz trennen....und die Materialien korrekt unterinenander eingeben",
+        "projectCode": "SB-NORD-01"
+      }
+    },
+    {
+      "id": "r_1773094342578",
+      "created": "2026-03-09T22:12:22.578Z",
+      "trigger": "Materialbezeichnung im Regiebericht",
+      "rule": "Stellen Sie sicher, dass die Einheiten korrekt und ohne redundante Angaben in der Materialbezeichnung angegeben sind. Beispiel: '4; StP; UW50' anstelle von '4; Stp; LFm UW50'",
+      "source": {
+        "userMessage": "einheit stp auf lfm umändern und lfm von bezeichnung entfernen",
+        "projectCode": "KAS"
+      }
+    },
+    {
+      "id": "r_1773094479154",
+      "created": "2026-03-09T22:14:39.154Z",
+      "trigger": "Materialien mit Einheit UW50",
+      "rule": "Stelle sicher, dass Materialien mit der Bezeichnung 'UW50' als 'LFm' (Linealfuersatzmeter) eingetragen werden.",
+      "source": {
+        "userMessage": "Einheit von UW50 ist lfm",
+        "projectCode": "KAS"
+      }
+    },
+    {
+      "id": "r_1773094622066",
+      "created": "2026-03-09T22:17:02.066Z",
+      "trigger": "Materialangaben in Regieberichten",
+      "rule": "Stelle sicher, dass die Einheit für jedes Material korrekt angegeben ist (z.B. UW50 hat die Einheit Lfm). Kontrolliere dies immer, unabhängig von der Materialbezeichnung.",
+      "source": {
+        "userMessage": "einheit von UW50 ist lfm\nmerke dir das für zukunft!",
+        "projectCode": "KAS"
+      }
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const ExcelJS = require("exceljs");
 
 const DEFAULT_DATA_ROOT = path.join(__dirname, "Bauvorhaben");
@@ -1025,6 +1026,68 @@ async function fillRegiebericht({ project, reportNumber, lines, sections, outFil
   await wb.xlsx.writeFile(outFile);
 }
 
+// BTB Worker Role Mapping: role keyword -> cell for count
+const BTB_ROLE_MAP = {
+  projektleiter: { col: "A", row: 13 },
+  bauleiter: { col: "A", row: 14 },
+  polier: { col: "A", row: 15 },
+  "gehob. bau-fa": { col: "A", row: 16 },
+  "gehob.bau-fa": { col: "A", row: 16 },
+  "spezialbau-fa": { col: "F", row: 13 },
+  werkpolier: { col: "F", row: 14 },
+  bauvorarbeiter: { col: "F", row: 15 },
+  "bau-fa": { col: "F", row: 16 },
+  baufachwerker: { col: "K", row: 13 },
+  bauwerker: { col: "K", row: 14 },
+  maschinist: { col: "K", row: 15 },
+  kranfahrer: { col: "K", row: 16 },
+  fremdfirmen: { col: "P", row: 14 },
+  fremdfirma: { col: "P", row: 14 },
+  // Common aliases
+  monteur: { col: "F", row: 13 },
+  monteure: { col: "F", row: 13 },
+  installateur: { col: "F", row: 13 },
+  installateure: { col: "F", row: 13 },
+  helfer: { col: "K", row: 14 },
+  mitarbeiter: { col: "F", row: 13 },
+  arbeiter: { col: "K", row: 14 },
+  facharbeiter: { col: "F", row: 16 },
+};
+
+function findBTBRoleMapping(workerName) {
+  const lower = String(workerName || "").toLowerCase().trim();
+  // Direct match
+  if (BTB_ROLE_MAP[lower]) return BTB_ROLE_MAP[lower];
+  // Check if any key is contained in the name
+  for (const [key, mapping] of Object.entries(BTB_ROLE_MAP)) {
+    if (lower.includes(key)) return mapping;
+  }
+  // Default: Spezialbau-FA
+  return { col: "F", row: 13 };
+}
+
+function fillBTBWorkerGrid(sheet, workers) {
+  // Reset all worker count cells
+  const gridCells = [
+    "A13", "A14", "A15", "A16",
+    "F13", "F14", "F15", "F16",
+    "K13", "K14", "K15", "K16",
+    "P14", "P15", "P16",
+  ];
+  for (const cell of gridCells) sheet.getCell(cell).value = 0;
+
+  let totalCount = 0;
+  for (const worker of workers) {
+    const mapping = findBTBRoleMapping(worker.name);
+    const cellRef = `${mapping.col}${mapping.row}`;
+    const current = sheet.getCell(cellRef).value || 0;
+    sheet.getCell(cellRef).value = (typeof current === "number" ? current : 0) + 1;
+    totalCount++;
+  }
+  // Overwrite G11 with total (was formula =F13)
+  sheet.getCell("G11").value = totalCount;
+}
+
 async function fillBautagesbericht({ project, reportNumber, lines, sections, outFile }) {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.readFile(TEMPLATE_BTB);
@@ -1044,13 +1107,47 @@ async function fillBautagesbericht({ project, reportNumber, lines, sections, out
   }
 
   const finalSections = normalizeReportSections(lines, sections);
-  fillRange(sheet, 19, 25, "A", finalSections.leistungen);
+
+  // Leistungen: rows 19-28 (10 rows, merged A:S)
+  fillRange(sheet, 19, 28, "A", finalSections.leistungen);
+
+  // Workers: map to BTB grid in rows 13-16
+  const rawWorkerLines = finalSections.arbeitskraefte.length
+    ? finalSections.arbeitskraefte
+    : extractWorkerLinesFromText(lines);
+  const workerEntries = rawWorkerLines.flatMap(parseWorkerEntries);
+  const workers = aggregateWorkers(workerEntries);
+  fillBTBWorkerGrid(sheet, workers);
+
+  // Material: rows 30-35 (repurpose Behinderungen area)
+  if (finalSections.material.length) {
+    sheet.getCell("A29").value = "MATERIAL / BEHINDERUNGEN:";
+    const materials = finalSections.material.map(parseMaterialLine);
+    for (let i = 0; i < 6; i++) {
+      const row = 30 + i;
+      const item = materials[i];
+      const cellValue = item
+        ? `${item.qty} ${item.unit} ${item.desc}`.trim()
+        : "";
+      sheet.getCell(`A${row}`).value = cellValue;
+    }
+  }
+
   sheet.getCell("L45").value = new Date();
 
   await wb.xlsx.writeFile(outFile);
 }
 
-async function generateReportFile({ type, project, lines, sections }) {
+function buildReportSectionsFromAIData(reportData) {
+  if (!reportData) return { leistungen: [], arbeitskraefte: [], material: [] };
+  return {
+    leistungen: Array.isArray(reportData.leistungen) ? reportData.leistungen : [],
+    arbeitskraefte: Array.isArray(reportData.arbeitskraefte) ? reportData.arbeitskraefte : [],
+    material: Array.isArray(reportData.material) ? reportData.material : [],
+  };
+}
+
+async function generateReportFile({ type, project, lines, sections, preview = false }) {
   const projectDir = ensureProjectStructure(project);
   const reportDir =
     type === "RB"
@@ -1058,6 +1155,20 @@ async function generateReportFile({ type, project, lines, sections }) {
       : path.join(projectDir, "Bautageberichte");
   const prefix = type === "RB" ? "RB" : "BTB";
   const number = getNextReportNumber(reportDir, prefix);
+
+  if (preview) {
+    const tmpDir = os.tmpdir();
+    const outFile = path.join(tmpDir, `preview_${prefix}${number}_${Date.now()}.xlsx`);
+
+    if (type === "RB") {
+      await fillRegiebericht({ project, reportNumber: number, lines, sections, outFile });
+    } else {
+      await fillBautagesbericht({ project, reportNumber: number, lines, sections, outFile });
+    }
+
+    return { outFile, number, reportFolder: null, photosDir: null, isPreview: true };
+  }
+
   const reportFolder = path.join(reportDir, `${prefix}${number}`);
   ensureDir(reportFolder);
   const outFile = path.join(reportFolder, `${prefix}${number}.xlsx`);
@@ -1069,7 +1180,7 @@ async function generateReportFile({ type, project, lines, sections }) {
     await fillBautagesbericht({ project, reportNumber: number, lines, sections, outFile });
   }
 
-  return { outFile, number, reportFolder, photosDir };
+  return { outFile, number, reportFolder, photosDir, isPreview: false };
 }
 
 module.exports = {
@@ -1080,4 +1191,10 @@ module.exports = {
   upsertProject,
   getProjectByCode,
   generateReportFile,
+  getNextReportNumber,
+  buildReportSectionsFromAIData,
+  parseWorkerEntries,
+  aggregateWorkers,
+  parseMaterialLine,
+  normalizeReportSections,
 };

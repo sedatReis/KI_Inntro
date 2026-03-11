@@ -1,0 +1,24 @@
+{
+  "rules": [
+    {
+      "id": "r_1772883201534",
+      "created": "2026-03-07T11:33:21.534Z",
+      "trigger": "Beim Überprüfen von Material- und Arbeitskraftlisten",
+      "rule": "Prüfen Sie, ob die Informationen korrekt in den jeweiligen Listen (Material oder Arbeitskräfte) eingetragen wurden. Korrigieren Sie gegebenenfalls die Einträge, um sicherzustellen, dass sie an der richtigen Stelle stehen.",
+      "source": {
+        "userMessage": "nicht dort in die Liste sondern bei den Mitarbeiter Liste eintragen",
+        "projectCode": "SB-NORD-01"
+      }
+    },
+    {
+      "id": "r_1772883427908",
+      "created": "2026-03-07T11:37:07.908Z",
+      "trigger": "Beim Aufschreiben von Leistungen",
+      "rule": "Trenne jede einzelne Arbeit oder Aufgabe klar und deutlich durch Kommas, um Unklarheiten zu vermeiden. Beispiel: 'Unterputze anbringen, Arbeit mit Silikon'",
+      "source": {
+        "userMessage": "Silikon arbeit und Unterputz trennen....und die Materialien korrekt unterinenander eingeben",
+        "projectCode": "SB-NORD-01"
+      }
+    }
+  ]
+}
