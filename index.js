@@ -441,7 +441,7 @@ function ensureNasMounted() {
       const pass = NAS_PASS ? `'${NAS_PASS}'` : "";
       execSync(`mount_smbfs //admin:${pass}@192.168.2.126/server ${NAS_MOUNT}`, { timeout: 10000 });
     } else {
-      execSync(`sudo mount -t cifs //192.168.2.126/server ${NAS_MOUNT} -o username=admin,password=${NAS_PASS},vers=3.0,iocharset=utf8`, { timeout: 10000 });
+      execSync(`sudo mount -t cifs //192.168.2.126/server ${NAS_MOUNT} -o username=admin,password=${NAS_PASS},vers=3.0,iocharset=utf8,file_mode=0777,dir_mode=0777`, { timeout: 10000 });
     }
     return true;
   } catch (e) {
