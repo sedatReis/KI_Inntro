@@ -62,7 +62,7 @@ if (!BOT_TOKEN) throw new Error("BOT_TOKEN fehlt");
 if (!OWNER_USER_ID) throw new Error("OWNER_USER_ID fehlt");
 
 ensureBaseStructure();
-const bot = new Telegraf(BOT_TOKEN);
+const bot = new Telegraf(BOT_TOKEN, { handlerTimeout: 300_000 });
 bot.botInfo = { username: "KIInntro_bot" };
 const db = new Database(path.join(META_DIR, "messages.db"));
 console.log(`[BOOT] DATA_ROOT: ${DATA_ROOT}`);
