@@ -436,8 +436,13 @@ function ensureNasMounted() {
   } catch (e) { /* not mounted */ }
   try {
     fs.mkdirSync(NAS_MOUNT, { recursive: true });
-    const pass = NAS_PASS ? `'${NAS_PASS}'` : "";
-    execSync(`mount_smbfs //admin:${pass}@192.168.2.126/server ${NAS_MOUNT}`, { timeout: 10000 });
+    const isMac = process.platform === "darwin";
+    if (isMac) {
+      const pass = NAS_PASS ? `'${NAS_PASS}'` : "";
+      execSync(`mount_smbfs //admin:${pass}@192.168.2.126/server ${NAS_MOUNT}`, { timeout: 10000 });
+    } else {
+      execSync(`sudo mount -t cifs //192.168.2.126/server ${NAS_MOUNT} -o username=admin,password=${NAS_PASS},vers=3.0,iocharset=utf8`, { timeout: 10000 });
+    }
     return true;
   } catch (e) {
     console.error("[NAS-MOUNT] error:", e.message);
