@@ -1138,12 +1138,21 @@ async function fillBautagesbericht({ project, reportNumber, lines, sections, out
   await wb.xlsx.writeFile(outFile);
 }
 
+function ensureStringArray(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(v => {
+    if (typeof v === "string") return v;
+    if (v && typeof v === "object") return Object.values(v).filter(Boolean).join("; ");
+    return String(v || "");
+  }).filter(Boolean);
+}
+
 function buildReportSectionsFromAIData(reportData) {
   if (!reportData) return { leistungen: [], arbeitskraefte: [], material: [] };
   return {
-    leistungen: Array.isArray(reportData.leistungen) ? reportData.leistungen : [],
-    arbeitskraefte: Array.isArray(reportData.arbeitskraefte) ? reportData.arbeitskraefte : [],
-    material: Array.isArray(reportData.material) ? reportData.material : [],
+    leistungen: ensureStringArray(reportData.leistungen),
+    arbeitskraefte: ensureStringArray(reportData.arbeitskraefte),
+    material: ensureStringArray(reportData.material),
   };
 }
 

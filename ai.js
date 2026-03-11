@@ -156,15 +156,26 @@ async function chatReportAI({ systemPrompt, conversationHistory, userMessage }) 
     return jsonText.substring(start, end + 1);
   }
 
+  function flattenToString(item) {
+    if (typeof item === "string") return item;
+    if (item && typeof item === "object") {
+      // Handle objects like {qty: "4", unit: "lfm", desc: "UW50"}
+      const values = Object.values(item).filter(v => v !== null && v !== undefined && v !== "");
+      return values.join("; ");
+    }
+    return String(item || "");
+  }
+
   function parseReportJSON(dataPart) {
     try {
       const jsonText = extractJSON(dataPart);
       if (!jsonText) return null;
       const parsed = JSON.parse(jsonText);
+      const toStringArray = (arr) => (Array.isArray(arr) ? arr.map(flattenToString).filter(Boolean) : []);
       return {
-        leistungen: Array.isArray(parsed.leistungen) ? parsed.leistungen : [],
-        arbeitskraefte: Array.isArray(parsed.arbeitskraefte) ? parsed.arbeitskraefte : [],
-        material: Array.isArray(parsed.material) ? parsed.material : [],
+        leistungen: toStringArray(parsed.leistungen),
+        arbeitskraefte: toStringArray(parsed.arbeitskraefte),
+        material: toStringArray(parsed.material),
       };
     } catch (e) {
       console.error("[CHAT-REPORT-AI] JSON parse error:", e.message);
@@ -327,10 +338,11 @@ ${(lines || []).map((l) => `- ${l}`).join("\n")}
   try {
     const jsonText = raw.trim().replace(/^```json|```$/g, "").trim();
     const data = JSON.parse(jsonText);
+    const toStrArr = (arr) => (Array.isArray(arr) ? arr.map(v => typeof v === "string" ? v : (v && typeof v === "object" ? Object.values(v).filter(Boolean).join("; ") : String(v || ""))).filter(Boolean) : []);
     return {
-      leistungen: Array.isArray(data.leistungen) ? data.leistungen : [],
-      arbeitskraefte: Array.isArray(data.arbeitskraefte) ? data.arbeitskraefte : [],
-      material: Array.isArray(data.material) ? data.material : [],
+      leistungen: toStrArr(data.leistungen),
+      arbeitskraefte: toStrArr(data.arbeitskraefte),
+      material: toStrArr(data.material),
     };
   } catch (err) {
     return null;
