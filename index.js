@@ -234,6 +234,15 @@ function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
+function startTyping(ctx) {
+  ctx.sendChatAction("typing").catch(() => {});
+  const interval = setInterval(() => {
+    ctx.sendChatAction("typing").catch(() => {});
+  }, 4000);
+  return () => clearInterval(interval);
+}
+
+
 // Cleanup idle sessions every 60 seconds
 setInterval(() => {
   const now = Date.now();
@@ -708,16 +717,18 @@ bot.command("report", async (ctx) => {
   const rows = selectRecentByChat.all(chat.id, "-24 hours");
   if (!rows.length) return ctx.reply("Keine Nachrichten für den Bericht gefunden.");
 
-  await ctx.reply("🧠 KI erstellt Bericht… ⏳");
+  const stopTyping = startTyping(ctx);
 
   try {
     console.log("[REPORT] calling KI for chat", chat.id, chat.title, "rows:", rows.length);
     const report = await generateReport(rows, chat.title || String(chat.id));
+    stopTyping();
     console.log("[REPORT] ok, len:", report.length);
 
     const chunks = report.match(/[\s\S]{1,3500}/g) || [];
     for (const part of chunks) await ctx.reply(part);
   } catch (err) {
+    stopTyping();
     console.error("[REPORT] error:", err);
     await ctx.reply("❌ Fehler bei der KI-Berichtserstellung. Schau ins Terminal-Log.");
   }
@@ -811,7 +822,7 @@ bot.command("ask", async (ctx) => {
   const question = ctx.message.text.replace(/^\/ask\s*/i, "").trim();
   if (!question) return ctx.reply("Bitte Frage angeben: /ask Was sind die Risiken heute?");
 
-  await ctx.reply("🧠 Denke nach… ⏳");
+  const stopTyping = startTyping(ctx);
 
   try {
     const pn = getProjectName(ctx.from.id);
@@ -823,10 +834,12 @@ bot.command("ask", async (ctx) => {
       projectName: pn,
       contextText,
     });
+    stopTyping();
 
     const chunks = answer.match(/[\s\S]{1,3500}/g) || [];
     for (const part of chunks) await ctx.reply(part);
   } catch (err) {
+    stopTyping();
     console.error("[ASK] error:", err);
     await ctx.reply("❌ KI-Fehler. Schau ins Terminal.");
   }
@@ -1105,16 +1118,21 @@ bot.on("text", async (ctx) => {
 
       // === NORMAL CHAT MESSAGE -> AI ===
       try {
-        await ctx.sendChatAction("typing");
+        const stopTyping = startTyping(ctx);
         const previousData = session.reportData
           ? JSON.parse(JSON.stringify(session.reportData))
           : null;
 
-        const { response, reportData } = await chatReportAI({
-          systemPrompt: session.systemPrompt,
-          conversationHistory: session.conversationHistory,
-          userMessage: text,
-        });
+        let response, reportData;
+        try {
+          ({ response, reportData } = await chatReportAI({
+            systemPrompt: session.systemPrompt,
+            conversationHistory: session.conversationHistory,
+            userMessage: text,
+          }));
+        } finally {
+          stopTyping();
+        }
 
         // Update conversation history (keep last 20 messages max)
         session.conversationHistory.push({ role: "user", content: text });
@@ -1341,7 +1359,7 @@ bot.on("text", async (ctx) => {
         );
       }
 
-      await ctx.reply("✉️ Erstelle E-Mail-Entwurf… ⏳");
+      const stopTyping = startTyping(ctx);
 
       try {
         const hours = getContextHours(ctx.from.id);
@@ -1351,6 +1369,7 @@ bot.on("text", async (ctx) => {
           projectName: projectForRecipients,
           contextText,
         });
+        stopTyping();
 
         pendingEmailByUser.set(ctx.from.id, {
           to: recipient,
@@ -1376,6 +1395,7 @@ bot.on("text", async (ctx) => {
           `📧 Entwurf:\nAn: ${recipient}\nBetreff: ${subject}\n\n${body}\n\n${hint}`
         );
       } catch (err) {
+        stopTyping();
         console.error("[EMAIL] draft error:", err);
         return ctx.reply("❌ Fehler bei der E-Mail-Erstellung. Schau ins Terminal.");
       }
@@ -1428,7 +1448,7 @@ bot.on("text", async (ctx) => {
       // Fall through to general chat
     }
 
-    await ctx.sendChatAction("typing");
+    const stopTyping = startTyping(ctx);
 
     try {
       const pn = getProjectName(ctx.from.id);
@@ -1440,10 +1460,12 @@ bot.on("text", async (ctx) => {
         projectName: pn,
         contextText,
       });
+      stopTyping();
 
       const chunks = answer.match(/[\s\S]{1,3500}/g) || [];
       for (const part of chunks) await ctx.reply(part);
     } catch (err) {
+      stopTyping();
       console.error("[AI-CHAT] error:", err);
       await ctx.reply("KI-Fehler. Schau ins Terminal.");
     }
