@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bau-KI Bot – Benutzerhandbuch</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7fa;
+      color: #2d3436;
+      line-height: 1.7;
+    }
+    .header {
+      background: linear-gradient(135deg, #0984e3, #6c5ce7);
+      color: white;
+      padding: 60px 20px;
+      text-align: center;
+    }
+    .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+    .header p { font-size: 1.2em; opacity: 0.9; }
+    .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+
+    .section {
+      background: white;
+      border-radius: 12px;
+      padding: 35px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 15px rgba(0,0,0,0.06);
+    }
+    .section h2 {
+      font-size: 1.5em;
+      color: #0984e3;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #dfe6e9;
+    }
+    .section h3 {
+      font-size: 1.15em;
+      color: #6c5ce7;
+      margin: 25px 0 12px;
+    }
+
+    .chat-example {
+      background: #e8f4f8;
+      border-left: 4px solid #0984e3;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.95em;
+    }
+    .chat-example .user { color: #0984e3; font-weight: bold; }
+    .chat-example .bot { color: #6c5ce7; font-weight: bold; }
+    .chat-example .line { margin: 6px 0; }
+
+    .step-list {
+      list-style: none;
+      counter-reset: step;
+      padding: 0;
+    }
+    .step-list li {
+      counter-increment: step;
+      padding: 12px 15px 12px 55px;
+      position: relative;
+      margin-bottom: 10px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .step-list li::before {
+      content: counter(step);
+      position: absolute;
+      left: 15px;
+      top: 12px;
+      background: #0984e3;
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 28px;
+      font-weight: bold;
+      font-size: 0.85em;
+    }
+
+    .command-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+    .command-table th {
+      background: #0984e3;
+      color: white;
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 600;
+    }
+    .command-table td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #dfe6e9;
+    }
+    .command-table tr:nth-child(even) { background: #f8f9fa; }
+    .command-table code {
+      background: #dfe6e9;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+
+    .tip-box {
+      background: #ffeaa7;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin: 15px 0;
+      font-size: 0.95em;
+    }
+    .tip-box strong { color: #d63031; }
+
+    .info-box {
+      background: #dfe6e9;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin: 15px 0;
+    }
+
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 20px 0;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .flow-step {
+      background: #0984e3;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 25px;
+      font-weight: 600;
+      font-size: 0.9em;
+    }
+    .flow-arrow { font-size: 1.5em; color: #b2bec3; }
+
+    .toc { padding: 0; list-style: none; }
+    .toc li { margin: 8px 0; }
+    .toc a {
+      color: #0984e3;
+      text-decoration: none;
+      font-size: 1.05em;
+    }
+    .toc a:hover { text-decoration: underline; }
+
+    .footer {
+      text-align: center;
+      padding: 30px;
+      color: #b2bec3;
+      font-size: 0.9em;
+    }
+
+    @media (max-width: 600px) {
+      .header h1 { font-size: 1.8em; }
+      .section { padding: 20px; }
+      .flow-diagram { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Bau-KI Bot</h1>
+  <p>Benutzerhandbuch – Ihr intelligenter Baustellenassistent</p>
+</div>
+
+<div class="container">
+
+  <!-- INHALTSVERZEICHNIS -->
+  <div class="section">
+    <h2>Inhaltsverzeichnis</h2>
+    <ul class="toc">
+      <li><a href="#einstieg">1. Erste Schritte</a></li>
+      <li><a href="#projekte">2. Projekte anlegen</a></li>
+      <li><a href="#gruppe">3. Telegram-Gruppe einrichten</a></li>
+      <li><a href="#regiebericht">4. Regiebericht erstellen</a></li>
+      <li><a href="#bautagesbericht">5. Bautagesbericht erstellen</a></li>
+      <li><a href="#korrektur">6. Korrekturen &amp; Anpassungen</a></li>
+      <li><a href="#fotos">7. Fotos hinzufuegen</a></li>
+      <li><a href="#email">8. E-Mails senden</a></li>
+      <li><a href="#privatchat">9. Privater Chat mit der KI</a></li>
+      <li><a href="#befehle">10. Alle Befehle im Ueberblick</a></li>
+      <li><a href="#tipps">11. Tipps &amp; Haeufige Fragen</a></li>
+    </ul>
+  </div>
+
+  <!-- 1. ERSTE SCHRITTE -->
+  <div class="section" id="einstieg">
+    <h2>1. Erste Schritte</h2>
+    <p>Der Bau-KI Bot ist Ihr persoenlicher Assistent fuer Baustellenberichte. Er laeuft ueber <strong>Telegram</strong> und versteht natuerliche Sprache – Sie muessen keine komplizierten Formulare ausfuellen.</p>
+
+    <h3>Was kann der Bot?</h3>
+    <ul style="margin-left: 20px;">
+      <li>Regieberichte (RB) automatisch aus Ihren Beschreibungen erstellen</li>
+      <li>Bautageberichte (BTB) erfassen</li>
+      <li>Excel- und PDF-Dateien generieren</li>
+      <li>Berichte automatisch auf dem NAS-Server speichern</li>
+      <li>E-Mail-Entwuerfe fuer den Versand vorbereiten</li>
+      <li>Fotos zum Bericht hinzufuegen</li>
+    </ul>
+
+    <h3>Bot starten</h3>
+    <ol class="step-list">
+      <li>Oeffnen Sie Telegram und suchen Sie nach <strong>@KIInntro_bot</strong></li>
+      <li>Starten Sie den Chat mit <code>/start</code></li>
+      <li>Der Bot zeigt Ihnen alle verfuegbaren Befehle an</li>
+    </ol>
+  </div>
+
+  <!-- 2. PROJEKTE -->
+  <div class="section" id="projekte">
+    <h2>2. Projekte anlegen</h2>
+    <p>Bevor Sie Berichte erstellen koennen, muss ein Projekt angelegt werden.</p>
+
+    <h3>Variante A: Per Befehl</h3>
+    <div class="chat-example">
+      <div class="line"><span class="user">Sie:</span> /newproject SB-NORD-01 | Sanierung Bahnhof Nord | Max Mustermann | max@firma.at | cc@firma.at | OeBB</div>
+      <div class="line"><span class="bot">Bot:</span> Projekt gespeichert: SB-NORD-01. Ordnerstruktur erstellt.</div>
+    </div>
+
+    <p>Das Format ist: <code>Kuerzel | Projektname | Ansprechperson | E-Mail | CC-E-Mail | Auftraggeber</code></p>
+
+    <h3>Variante B: Im Chat (einfacher)</h3>
+    <p>Schreiben Sie dem Bot einfach im privaten Chat:</p>
+    <div class="chat-example">
+      <div class="line"><span class="user">Sie:</span> Ich moechte ein neues Projekt anlegen</div>
+      <div class="line"><span class="bot">Bot:</span> Neues Projekt! Wie lautet das Kuerzel (z.B. SB-NORD-01)?</div>
+      <div class="line"><span class="user">Sie:</span> WH-GRAZ-03</div>
+      <div class="line"><span class="bot">Bot:</span> Wie heisst das Projekt?</div>
+      <div class="line"><span class="user">Sie:</span> Wohnhaus Graz Sued</div>
+      <div class="line"><span class="bot">Bot:</span> Ansprechperson (Name)?</div>
+      <div class="line"><span class="user">Sie:</span> Anna Huber</div>
+      <div class="line"><span class="bot">Bot:</span> E-Mail der Ansprechperson?</div>
+      <div class="line"><span class="user">Sie:</span> anna.huber@baufirma.at</div>
+      <div class="line"><span class="bot">Bot:</span> CC E-Mail? (oder 'nein' zum Ueberspringen)</div>
+      <div class="line"><span class="user">Sie:</span> nein</div>
+      <div class="line"><span class="bot">Bot:</span> Auftraggeber?</div>
+      <div class="line"><span class="user">Sie:</span> Gemeinde Graz</div>
+      <div class="line"><span class="bot">Bot:</span> Projekt erstellt: WH-GRAZ-03 - Wohnhaus Graz Sued</div>
+    </div>
+  </div>
+
+  <!-- 3. GRUPPE -->
+  <div class="section" id="gruppe">
+    <h2>3. Telegram-Gruppe einrichten</h2>
+    <p>Fuer jedes Projekt verwenden Sie eine eigene Telegram-Gruppe. So koennen auch Kollegen Berichte erstellen.</p>
+
+    <ol class="step-list">
+      <li>Erstellen Sie eine neue Telegram-Gruppe (z.B. "Baustelle Graz Sued")</li>
+      <li>Fuegen Sie den Bot <strong>@KIInntro_bot</strong> zur Gruppe hinzu</li>
+      <li>Verknuepfen Sie die Gruppe mit dem Projekt:</li>
+    </ol>
+
+    <div class="chat-example">
+      <div class="line"><span class="user">Sie:</span> /verknuepfen WH-GRAZ-03</div>
+      <div class="line"><span class="bot">Bot:</span> Gruppe verknuepft mit Projekt: WH-GRAZ-03 - Wohnhaus Graz Sued. Du kannst jetzt einfach 'RB' oder 'BTB' schreiben um einen Bericht zu starten.</div>
+    </div>
+
+    <div class="tip-box">
+      <strong>Wichtig:</strong> Stellen Sie sicher, dass der Bot in den Gruppeneinstellungen Nachrichten lesen darf (BotFather: Privacy Mode = Disabled).
+    </div>
+  </div>
+
+  <!-- 4. REGIEBERICHT -->
+  <div class="section" id="regiebericht">
+    <h2>4. Regiebericht erstellen (RB)</h2>
+    <p>Der Regiebericht erfasst Leistungen, Arbeitskraefte und Material fuer Ihr Bauvorhaben.</p>
+
+    <div class="flow-diagram">
+      <span class="flow-step">RB starten</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-step">Beschreiben</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-step">Ende</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-step">Pruefen</span>
+      <span class="flow-arrow">&rarr;</span>
+      <span class="flow-step">Freigeben</span>
+    </div>
+
+    <h3>Beispiel: Kompletter Ablauf</h3>
+    <div class="chat-example">
+      <div class="line"><span class="user">Sie:</span> RB</div>
+      <div class="line"><span class="bot">Bot:</span> RB-Bericht gestartet fuer WH-GRAZ-03. Erzaehl mir was heute auf der Baustelle gemacht wurde.</div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="user">Sie:</span> Heute haben 3 Mann 8 Stunden Fassade verputzt am Nordteil. Der Polier war auch 8 Stunden da. Wir haben 20 Sack Putz und 5 Sack Spachtelmasse verbraucht.</div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="bot">Bot:</span> Verstanden! Ich habe erfasst:</div>
+      <div class="line"><span class="bot">&nbsp;&nbsp;</span> Leistungen: Fassade verputzt (Nordteil)</div>
+      <div class="line"><span class="bot">&nbsp;&nbsp;</span> Arbeitskraefte: 3x Facharbeiter 8h, 1x Polier 8h</div>
+      <div class="line"><span class="bot">&nbsp;&nbsp;</span> Material: 20 Sack Putz, 5 Sack Spachtelmasse</div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="user">Sie:</span> Achja, und 2 Mann haben noch 4 Stunden die Geruestteile umgebaut</div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="bot">Bot:</span> Ergaenzt! Neue Leistung: Geruestteile umgebaut. 2x Facharbeiter 4h hinzugefuegt.</div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="user">Sie:</span> Ende</div>
+      <div class="line"><span class="bot">Bot:</span> Vorschau wird erstellt...</div>
+      <div class="line"><span class="bot">Bot:</span> [Sendet Excel-Vorschau]</div>
+      <div class="line"><span class="bot">Bot:</span> Pruefe den Bericht. Beschreibe Korrekturen wenn etwas nicht stimmt.</div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="user">Sie:</span> freigeben</div>
+      <div class="line"><span class="bot">Bot:</span> Bericht gespeichert.</div>
+      <div class="line"><span class="bot">Bot:</span> [Sendet PDF]</div>
+      <div class="line"><span class="bot">Bot:</span> [Sendet Excel]</div>
+      <div class="line"><span class="bot">Bot:</span> Bericht auf NAS-Server kopiert.</div>
+      <div class="line"><span class="bot">Bot:</span> E-Mail-Entwurf gespeichert.</div>
+    </div>
+
+    <div class="tip-box">
+      <strong>Tipp:</strong> Wenn die Gruppe bereits mit einem Projekt verknuepft ist, genuegt einfach <code>RB</code>. Andernfalls schreiben Sie <code>RB WH-GRAZ-03</code> mit dem Projektkuerzel.
+    </div>
+  </div>
+
+  <!-- 5. BTB -->
+  <div class="section" id="bautagesbericht">
+    <h2>5. Bautagesbericht erstellen (BTB)</h2>
+    <p>Der Bautagesbericht funktioniert genauso wie der Regiebericht – nur mit <code>BTB</code> statt <code>RB</code>:</p>
+
+    <div class="chat-example">
+      <div class="line"><span class="user">Sie:</span> BTB</div>
+      <div class="line"><span class="bot">Bot:</span> BTB-Bericht gestartet fuer WH-GRAZ-03. Erzaehl mir was heute auf der Baustelle gemacht wurde.</div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="user">Sie:</span> Heute Estrich im EG verlegt, 4 Mann waren da von 7 bis 15 Uhr. Wetter sonnig, 12 Grad. Keine besonderen Vorkommnisse.</div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="user">Sie:</span> Ende</div>
+      <div class="line"><span class="bot">Bot:</span> [Sendet Vorschau]</div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="user">Sie:</span> freigeben</div>
+    </div>
+  </div>
+
+  <!-- 6. KORREKTUREN -->
+  <div class="section" id="korrektur">
+    <h2>6. Korrekturen &amp; Anpassungen</h2>
+    <p>Wenn etwas nicht stimmt, koennen Sie jederzeit waehrend des Berichts oder nach der Vorschau korrigieren.</p>
+
+    <h3>Waehrend der Eingabe</h3>
+    <div class="chat-example">
+      <div class="line"><span class="user">Sie:</span> Die Facharbeiter waren nicht 8 sondern 6 Stunden da</div>
+      <div class="line"><span class="bot">Bot:</span> Korrigiert! Facharbeiter: 6h statt 8h.</div>
+    </div>
+
+    <h3>Nach der Vorschau</h3>
+    <div class="chat-example">
+      <div class="line"><span class="user">Sie:</span> Ende</div>
+      <div class="line"><span class="bot">Bot:</span> [Sendet Vorschau]</div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="user">Sie:</span> Das Material stimmt nicht, es waren 30 Sack Putz nicht 20</div>
+      <div class="line"><span class="bot">Bot:</span> Korrigiert! 30 Sack Putz.</div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="user">Sie:</span> Ende</div>
+      <div class="line"><span class="bot">Bot:</span> [Sendet aktualisierte Vorschau]</div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="user">Sie:</span> freigeben</div>
+    </div>
+
+    <div class="info-box">
+      Der Bot lernt aus Ihren Korrekturen! Wenn Sie z.B. regelmaessig "Polier" statt "Vorarbeiter" verwenden, merkt er sich das fuer zukuenftige Berichte.
+    </div>
+  </div>
+
+  <!-- 7. FOTOS -->
+  <div class="section" id="fotos">
+    <h2>7. Fotos hinzufuegen</h2>
+    <p>Waehrend ein Bericht laeuft, koennen Sie einfach Fotos in die Gruppe senden. Diese werden automatisch dem Bericht hinzugefuegt.</p>
+
+    <ol class="step-list">
+      <li>Starten Sie einen Bericht mit <code>RB</code> oder <code>BTB</code></li>
+      <li>Senden Sie Fotos ganz normal in die Gruppe</li>
+      <li>Die Fotos werden beim Freigeben automatisch gespeichert und dem PDF beigefuegt</li>
+    </ol>
+
+    <div class="tip-box">
+      <strong>Tipp:</strong> Sie koennen Fotos auch als Datei (nicht komprimiert) senden – der Bot erkennt Bilddateien automatisch.
+    </div>
+  </div>
+
+  <!-- 8. EMAIL -->
+  <div class="section" id="email">
+    <h2>8. E-Mails senden</h2>
+    <p>Nach dem Freigeben wird automatisch ein E-Mail-Entwurf in Outlook erstellt. Sie koennen aber auch manuell E-Mails ueber den privaten Chat senden.</p>
+
+    <h3>Automatisch (bei Berichtsfreigabe)</h3>
+    <p>Wenn beim Projekt eine E-Mail-Adresse hinterlegt ist, wird automatisch ein Entwurf mit dem PDF als Anhang in Outlook gespeichert.</p>
+
+    <h3>Manuell (im privaten Chat)</h3>
+    <div class="chat-example">
+      <div class="line"><span class="user">Sie:</span> Schicke eine Mail an max@firma.at wegen dem Fortschritt am Projekt Graz</div>
+      <div class="line"><span class="bot">Bot:</span> Erstelle E-Mail-Entwurf...</div>
+      <div class="line"><span class="bot">Bot:</span> Entwurf:</div>
+      <div class="line"><span class="bot">&nbsp;&nbsp;</span> An: max@firma.at</div>
+      <div class="line"><span class="bot">&nbsp;&nbsp;</span> Betreff: Fortschrittsbericht Wohnhaus Graz Sued</div>
+      <div class="line"><span class="bot">&nbsp;&nbsp;</span> [E-Mail-Text]</div>
+      <div class="line"><span class="bot">&nbsp;&nbsp;</span> Antworte mit 'go' zum Senden oder 'abbrechen' zum Verwerfen.</div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="user">Sie:</span> go</div>
+      <div class="line"><span class="bot">Bot:</span> E-Mail gesendet.</div>
+    </div>
+  </div>
+
+  <!-- 9. PRIVATCHAT -->
+  <div class="section" id="privatchat">
+    <h2>9. Privater Chat mit der KI</h2>
+    <p>Im privaten Chat koennen Sie dem Bot beliebige Fragen stellen. Er kennt den Kontext aus Ihren Projektgruppen.</p>
+
+    <div class="chat-example">
+      <div class="line"><span class="user">Sie:</span> Was wurde heute auf der Baustelle gemacht?</div>
+      <div class="line"><span class="bot">Bot:</span> Basierend auf den Nachrichten der letzten 24 Stunden: Im Projekt Graz Sued wurde heute die Fassade am Nordteil verputzt (3 Facharbeiter, 8h) und Geruestteile umgebaut...</div>
+    </div>
+
+    <h3>Projekt und Zeitraum setzen</h3>
+    <div class="chat-example">
+      <div class="line"><span class="user">Sie:</span> /project Wohnhaus Graz Sued</div>
+      <div class="line"><span class="bot">Bot:</span> Projekt gesetzt: Wohnhaus Graz Sued</div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="user">Sie:</span> /context 48</div>
+      <div class="line"><span class="bot">Bot:</span> Kontext-Zeitraum gesetzt: letzte 48 Stunden</div>
+    </div>
+
+    <h3>Einmalige Frage</h3>
+    <div class="chat-example">
+      <div class="line"><span class="user">Sie:</span> /ask Wie viele Leute waren heute auf der Baustelle?</div>
+      <div class="line"><span class="bot">Bot:</span> Laut den heutigen Nachrichten waren insgesamt 6 Personen vor Ort...</div>
+    </div>
+  </div>
+
+  <!-- 10. BEFEHLE -->
+  <div class="section" id="befehle">
+    <h2>10. Alle Befehle im Ueberblick</h2>
+
+    <h3>Allgemeine Befehle</h3>
+    <table class="command-table">
+      <tr><th>Befehl</th><th>Beschreibung</th></tr>
+      <tr><td><code>/start</code></td><td>Bot starten und Hilfe anzeigen</td></tr>
+      <tr><td><code>/who</code></td><td>Eigene Telegram User-ID anzeigen</td></tr>
+      <tr><td><code>/chatid</code></td><td>Chat-/Gruppen-ID anzeigen</td></tr>
+    </table>
+
+    <h3>Projekte</h3>
+    <table class="command-table">
+      <tr><th>Befehl</th><th>Beschreibung</th></tr>
+      <tr><td><code>/newproject ...</code></td><td>Neues Projekt anlegen</td></tr>
+      <tr><td><code>/verknuepfen CODE</code></td><td>Gruppe mit Projekt verknuepfen</td></tr>
+      <tr><td><code>/project NAME</code></td><td>Aktives Projekt im Privatchat setzen</td></tr>
+    </table>
+
+    <h3>Berichte (in der Gruppe)</h3>
+    <table class="command-table">
+      <tr><th>Eingabe</th><th>Beschreibung</th></tr>
+      <tr><td><code>RB</code> oder <code>RB CODE</code></td><td>Regiebericht starten</td></tr>
+      <tr><td><code>BTB</code> oder <code>BTB CODE</code></td><td>Bautagesbericht starten</td></tr>
+      <tr><td><code>Ende</code></td><td>Vorschau des Berichts erstellen</td></tr>
+      <tr><td><code>freigeben</code></td><td>Bericht endgueltig speichern</td></tr>
+      <tr><td><code>abbrechen</code></td><td>Bericht verwerfen</td></tr>
+    </table>
+
+    <h3>Zusammenfassungen &amp; KI</h3>
+    <table class="command-table">
+      <tr><th>Befehl</th><th>Beschreibung</th></tr>
+      <tr><td><code>/summary</code></td><td>Zusammenfassung aller Gruppen (24h)</td></tr>
+      <tr><td><code>/summary 48</code></td><td>Zusammenfassung der letzten 48 Stunden</td></tr>
+      <tr><td><code>/summarygroup</code></td><td>Zusammenfassung nur dieser Gruppe</td></tr>
+      <tr><td><code>/report</code></td><td>KI-Bericht aus Gruppennachrichten</td></tr>
+      <tr><td><code>/ask FRAGE</code></td><td>Einmalige Frage an die KI</td></tr>
+      <tr><td><code>/context STUNDEN</code></td><td>Kontext-Zeitraum setzen</td></tr>
+    </table>
+  </div>
+
+  <!-- 11. TIPPS -->
+  <div class="section" id="tipps">
+    <h2>11. Tipps &amp; Haeufige Fragen</h2>
+
+    <h3>Wie spreche ich am besten mit dem Bot?</h3>
+    <p>Schreiben Sie ganz normal, wie Sie es einem Kollegen erzaehlen wuerden:</p>
+    <div class="chat-example">
+      <div class="line"><span class="user">Gut:</span> "Heute haben 3 Mann 8 Stunden die Fassade verputzt, wir haben 20 Sack Putz gebraucht"</div>
+      <div class="line"><span class="user">Auch gut:</span> "3 FA 8h Fassade, 20 Sack Putz"</div>
+    </div>
+
+    <h3>Was passiert mit meinen Berichten?</h3>
+    <ul style="margin-left: 20px;">
+      <li>Excel- und PDF-Datei werden lokal auf dem Server gespeichert</li>
+      <li>Eine Kopie wird automatisch auf den NAS-Server gelegt</li>
+      <li>Ein E-Mail-Entwurf wird in Outlook erstellt (muss manuell gesendet werden)</li>
+    </ul>
+
+    <h3>Kann ich einen Bericht nachtraeglich aendern?</h3>
+    <p>Waehrend der Erstellung: Ja, beliebig oft korrigieren vor dem "freigeben". Nach dem Freigeben: Nein, starten Sie einen neuen Bericht.</p>
+
+    <h3>Was wenn der Bot nicht antwortet?</h3>
+    <div class="tip-box">
+      <strong>Geduld:</strong> Die KI laeuft lokal auf dem Server und kann manchmal einige Sekunden brauchen. Warten Sie bis zu 30 Sekunden auf eine Antwort.
+    </div>
+
+    <h3>Kann ich den Bot in mehreren Gruppen verwenden?</h3>
+    <p>Ja! Erstellen Sie fuer jedes Projekt eine eigene Gruppe und verknuepfen Sie diese mit dem jeweiligen Projektkuerzel.</p>
+
+    <h3>Wer hat Zugriff?</h3>
+    <p>Nur freigeschaltete Benutzer koennen den Bot verwenden. Kontaktieren Sie Ihren Administrator, um neue Benutzer hinzuzufuegen.</p>
+  </div>
+
+</div>
+
+<div class="footer">
+  Bau-KI Bot – Benutzerhandbuch &bull; Version 1.0 &bull; Stand: Maerz 2026
+</div>
+
+</body>
+</html>
