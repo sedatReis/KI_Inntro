@@ -247,7 +247,7 @@ function startTyping(ctx) {
 setInterval(() => {
   const now = Date.now();
   for (const [chatId, session] of activeReportByChat.entries()) {
-    if (now - session.lastActivity > 30 * 60 * 1000) {
+    if (now - session.lastActivity > 12 * 60 * 60 * 1000) {
       cleanupPreviewFile(session);
       activeReportByChat.delete(chatId);
       console.log(`[CLEANUP] Idle report session removed for chat ${chatId}`);
@@ -1174,6 +1174,14 @@ bot.on("text", async (ctx) => {
       } catch (err) {
         console.error("[REPORT-CHAT] error:", err);
         await ctx.reply("KI-Fehler. Versuche es nochmal oder schau ins Terminal.");
+      }
+    } else {
+      // Keine aktive Session: Fallback fuer Steuer-Befehle
+      const lower = text.trim().toLowerCase();
+      if (/^(ende|freigeben|freigabe|speichern|abbrechen|cancel|stop)$/i.test(lower)) {
+        await ctx.reply(
+          "Keine aktive Bericht-Session. Starte einen neuen Bericht mit 'RB' oder 'BTB'."
+        );
       }
     }
 
