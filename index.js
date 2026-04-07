@@ -40,6 +40,7 @@ const NAS_SHARE = process.env.NAS_SHARE || "//admin@192.168.2.126/server";
 const NAS_PASS = process.env.NAS_PASS || "";
 const NAS_MOUNT = "/tmp/nas_server";
 const NAS_REPORTS_PATH = "Projekte/Aufträge";
+const NAS_REPORTS_SUBFOLDER = "xKI_Regieberichte";
 const REPORT_EMAIL_SUBJECT = process.env.REPORT_EMAIL_SUBJECT || "Regiebericht {reportNumber} – {projectName}";
 const REPORT_EMAIL_BODY = process.env.REPORT_EMAIL_BODY || "Sehr geehrte/r {contactName},\\n\\nanbei erhalten Sie den Regiebericht...";
 const META_DIR = path.join(DATA_ROOT, "_meta");
@@ -464,7 +465,7 @@ async function copyReportToNAS({ outFile, pdfFile, photosDir, projectName, repor
     console.error("[NAS-COPY] NAS nicht erreichbar, Kopie uebersprungen.");
     return false;
   }
-  const destDir = path.join(NAS_MOUNT, NAS_REPORTS_PATH, projectName, "Regieberichte", `RB${reportNumber}`);
+  const destDir = path.join(NAS_MOUNT, NAS_REPORTS_PATH, NAS_REPORTS_SUBFOLDER, projectName, "Regieberichte", `RB${reportNumber}`);
   fs.mkdirSync(destDir, { recursive: true });
   // Copy report file
   const destFile = path.join(destDir, path.basename(outFile));
@@ -514,21 +515,70 @@ async function saveReportEmailDraft({ to, cc, contactName, attachmentPath, repor
     emailAddress: { address: email },
   }));
 
-  const bodyContent = "";
-  const contentType = "Text";
+  // Inline-Logo laden
+  const logoPath = path.join(__dirname, "Vorlagen", "logo.png");
+  let logoBase64 = null;
+  try {
+    logoBase64 = fs.readFileSync(logoPath).toString("base64");
+  } catch (e) {
+    console.warn("[EMAIL-DRAFT] logo.png nicht gefunden:", logoPath);
+  }
+
+  const logoHtml = logoBase64
+    ? '<p><img src="cid:inntrologo" alt="inntro" style="height:60px;"></p>'
+    : "";
+
+  const htmlBody = `<html><body style="font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #000000;">
+<p>Sehr geehrte Damen und Herren,</p>
+<p>anbei erhalten Sie die aktuellen Regieberichte.</p>
+<p>Sollten Sie Rückfragen haben oder weitere Informationen benötigen,<br>
+stehe ich Ihnen selbstverständlich gerne zur Verfügung.<br>
+<span style="color:#1F497D;">Mit freundlichen Grüßen</span><br>
+<span style="color:#1F497D;">Regieberichtteam</span></p>
+${logoHtml}
+<p style="color:#1F497D;"><b>inntro Mintura GmbH</b><br>
+Inhausen 1a<br>
+85778 Haimhausen<br>
+<a href="mailto:office@inntro.de" style="color:#1F497D;">office@inntro.de</a><br>
+<a href="https://www.inntro.de" style="color:#1F497D;">www.inntro.de</a><br>
+UID: DE453831392<br>
+HRB 300622<br>
+Amtsgericht: München</p>
+<p style="color:#C00000; font-size:9pt;">
+Diese Nachricht und allfällig angehängte Dokumente sind vertraulich und nur für den/die Adressant(en) bestimmt<br>
+Sollten Sie nicht der beabsichtigte Adressant sein, ist jede Offenlegung, Weiterleitung oder sonstige Verwendung dieser Information nicht gestattet<br>
+In diesem Fall bitten wir Sie, den Absender zu verständigen und die Information zu vernichten<br>
+Für die eventuelle Übermittlungsfehler oder sonstige Irrtümer bei der Übermittlung von Daten besteht keine Haftung<br>
+This message and any attached files are confidential den intended solely for the addressee(s)<br>
+Any publication, transmission or other use of the information by a person or entity other than the intended addressee is prohibited.<br>
+If you receive this in error place, please contact the sender and delate the information<br>
+The sender does not accept liability for any errors or omissions as a result of the transmission.</p>
+</body></html>`;
+
+  const attachments = [
+    {
+      "@odata.type": "#microsoft.graph.fileAttachment",
+      name: path.basename(attachmentPath),
+      contentBytes: contentBytes,
+    },
+  ];
+  if (logoBase64) {
+    attachments.push({
+      "@odata.type": "#microsoft.graph.fileAttachment",
+      name: "logo.png",
+      contentType: "image/png",
+      contentId: "inntrologo",
+      isInline: true,
+      contentBytes: logoBase64,
+    });
+  }
 
   const message = {
     subject: subject,
-    body: { contentType, content: bodyContent },
+    body: { contentType: "HTML", content: htmlBody },
     toRecipients: toRecipients,
     ccRecipients: ccRecipients.length > 0 ? ccRecipients : undefined,
-    attachments: [
-      {
-        "@odata.type": "#microsoft.graph.fileAttachment",
-        name: path.basename(attachmentPath),
-        contentBytes: contentBytes,
-      },
-    ],
+    attachments: attachments,
   };
 
   await client.api("/users/office@inntro.de/messages").post(message);
