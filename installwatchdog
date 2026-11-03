@@ -1,0 +1,101 @@
+#!/bin/bash
+# Installiert den KI-Watchdog auf dem Mini-PC (Ubuntu).
+# Aufruf im Projektordner:  sudo bash installwatchdog
+#
+# Der Watchdog prueft alle 2 Minuten, ob Ollama antwortet.
+#  1. Ollama antwortet nicht      -> Ollama wird neu gestartet
+#  2. auch danach keine Antwort   -> Fehlversuch wird gezaehlt
+#  3. nach 3 Fehlversuchen        -> Rechner startet neu (hoechstens alle 6 Stunden)
+# Den Bot selbst startet pm2 automatisch neu (Autostart ist aktiv).
+#
+# Log ansehen:      journalctl -t ki-watchdog
+# Deinstallieren:   sudo systemctl disable --now ki-watchdog.timer
+
+set -e
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Bitte mit sudo ausfuehren: sudo bash installwatchdog"
+  exit 1
+fi
+
+command -v curl >/dev/null || apt-get install -y curl
+
+cat > /usr/local/bin/ki-watchdog.sh <<'EOF'
+#!/bin/bash
+# KI-Watchdog: prueft Ollama und startet es bei Bedarf neu
+URL="http://127.0.0.1:11434/api/tags"
+STATE=/var/lib/ki-watchdog
+MAX_FAILS=3
+REBOOT_PAUSE=21600 # 6 Stunden
+
+mkdir -p "$STATE"
+log() { logger -t ki-watchdog "$*"; echo "$*"; }
+check() { curl -sf -m 15 "$URL" >/dev/null; }
+
+if check; then
+  rm -f "$STATE/fails"
+  exit 0
+fi
+
+log "Ollama antwortet nicht - starte Ollama neu"
+if snap list ollama >/dev/null 2>&1; then
+  snap restart ollama
+else
+  systemctl restart ollama
+fi
+sleep 30
+
+if check; then
+  log "Ollama nach Neustart wieder erreichbar"
+  rm -f "$STATE/fails"
+  exit 0
+fi
+
+fails=$(( $(cat "$STATE/fails" 2>/dev/null || echo 0) + 1 ))
+echo "$fails" > "$STATE/fails"
+log "Ollama nach Neustart weiterhin nicht erreichbar (Fehlversuch $fails von $MAX_FAILS)"
+
+if [ "$fails" -ge "$MAX_FAILS" ]; then
+  last=$(cat "$STATE/last_reboot" 2>/dev/null || echo 0)
+  now=$(date +%s)
+  if [ $((now - last)) -ge "$REBOOT_PAUSE" ]; then
+    echo "$now" > "$STATE/last_reboot"
+    rm -f "$STATE/fails"
+    log "Starte Rechner neu"
+    systemctl reboot
+  else
+    log "Rechner-Neustart uebersprungen (letzter Neustart vor weniger als 6 Stunden)"
+  fi
+fi
+EOF
+chmod 755 /usr/local/bin/ki-watchdog.sh
+
+cat > /etc/systemd/system/ki-watchdog.service <<'EOF'
+[Unit]
+Description=KI-Watchdog (prueft Ollama)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ki-watchdog.sh
+TimeoutStartSec=180
+EOF
+
+cat > /etc/systemd/system/ki-watchdog.timer <<'EOF'
+[Unit]
+Description=KI-Watchdog alle 2 Minuten
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now ki-watchdog.timer
+
+echo
+echo "KI-Watchdog installiert."
+systemctl list-timers ki-watchdog.timer --no-pager
